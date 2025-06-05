@@ -298,13 +298,13 @@ $jasas_result = mysqli_query($koneksi, "SELECT id_jasa, jenis_jasa, harga FROM j
                                 <option value="menunggu sparepart" <?php echo ($service['status'] == 'menunggu sparepart') ? 'selected' : ''; ?>>Menunggu Sparepart</option>
                                 <option value="diperbaiki" <?php echo ($service['status'] == 'diperbaiki') ? 'selected' : ''; ?>>Diperbaiki</option>
                                 <option value="selesai" <?php echo ($service['status'] == 'selesai') ? 'selected' : ''; ?>>Selesai</option>
+                                <option value="siap diambil" <?php echo ($service['status'] == 'siap diambil') ? 'selected' : ''; ?>>Siap Diambil</option>
                                 <option value="dibatalkan" <?php echo ($service['status'] == 'dibatalkan') ? 'selected' : ''; ?>>Dibatalkan</option>
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="tanggal_selesai" class="form-label fw-medium">Tanggal Selesai:</label>
                             <input type="date" id="tanggal_selesai" name="tanggal_selesai" class="form-control" value="<?php echo htmlspecialchars($service['tanggal_selesai']); ?>" readonly>
-                            <div class="form-text">Otomatis jika status "Selesai" & sebelumnya kosong.</div>
                         </div>
                     </div>
                     <div class="row">
