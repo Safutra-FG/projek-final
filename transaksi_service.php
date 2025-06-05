@@ -37,7 +37,7 @@ if (isset($_GET['id_service']) && isset($_GET['amount'])) {
             if ($result->num_rows > 0) {
                 $service_data = $result->fetch_assoc();
             } else {
-                $error_message = "Data service dengan ID '".htmlspecialchars($id_service_input)."' tidak ditemukan.";
+                $error_message = "Data service dengan ID '" . htmlspecialchars($id_service_input) . "' tidak ditemukan.";
             }
             $stmt->close();
         } else {
@@ -54,6 +54,7 @@ $koneksi->close();
 ?>
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -63,24 +64,32 @@ $koneksi->close();
     <style>
         /* Sedikit custom style jika diperlukan, usahakan minimalkan */
         .logo-img {
-            max-height: 50px; /* Sesuaikan ukuran logo */
+            max-height: 50px;
+            /* Sesuaikan ukuran logo */
         }
+
         .company-name-header {
-            font-size: 1.75rem; /* Ukuran font nama perusahaan */
+            font-size: 1.75rem;
+            /* Ukuran font nama perusahaan */
             font-weight: bold;
         }
+
         .total-tagihan-display {
             font-size: 1.25em;
             font-weight: bold;
-            color: #dc3545; /* Warna merah Bootstrap untuk tagihan */
+            color: #dc3545;
+            /* Warna merah Bootstrap untuk tagihan */
         }
+
         .label-summary {
-            min-width: 140px; /* Agar titik dua di ringkasan rapi */
+            min-width: 140px;
+            /* Agar titik dua di ringkasan rapi */
             display: inline-block;
             font-weight: 500;
         }
     </style>
 </head>
+
 <body>
     <div class="container my-4">
         <header class="d-flex flex-wrap align-items-center justify-content-center justify-content-md-between py-3 mb-4 border-bottom">
@@ -90,7 +99,7 @@ $koneksi->close();
                     <span class="company-name-header">Thar'z Computer</span>
                 </a>
             </div>
-            </header>
+        </header>
 
         <h2 class="text-center mb-4 display-6">Instruksi Pembayaran Service</h2>
 
@@ -99,9 +108,11 @@ $koneksi->close();
                 <?php echo htmlspecialchars($error_message); ?>
             </div>
             <div class="text-center mt-4">
-                <?php if ($id_service_input && !$service_data): // Error karena ID tidak ditemukan, tapi ID ada ?>
+                <?php if ($id_service_input && !$service_data): // Error karena ID tidak ditemukan, tapi ID ada 
+                ?>
                     <a href="tracking_service.php?id_service=<?php echo htmlspecialchars($id_service_input); ?>" class="btn btn-primary"><i class="bi bi-arrow-left-circle"></i> Coba Lagi / Cek Status</a>
-                <?php else: // Error umum atau parameter tidak lengkap ?>
+                <?php else: // Error umum atau parameter tidak lengkap 
+                ?>
                     <a href="tracking_service.php" class="btn btn-primary"><i class="bi bi-search"></i> Kembali ke Halaman Tracking</a>
                 <?php endif; ?>
                 <a href="index.php" class="btn btn-outline-secondary"><i class="bi bi-house"></i> Kembali ke Beranda</a>
@@ -122,7 +133,7 @@ $koneksi->close();
 
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white py-3">
-                     <h4 class="my-0"><i class="bi bi-credit-card"></i> Metode Pembayaran</h4>
+                    <h4 class="my-0"><i class="bi bi-credit-card"></i> Metode Pembayaran</h4>
                 </div>
                 <div class="card-body p-lg-4">
                     <p class="text-center lead mb-4">Silakan selesaikan pembayaran Anda melalui salah satu metode berikut:</p>
@@ -133,31 +144,37 @@ $koneksi->close();
                                 <h3 class="mb-3"><i class="bi bi-shop"></i> 1. Bayar Langsung di Toko</h3>
                                 <p>Anda dapat melakukan pembayaran secara tunai atau metode lain yang tersedia di toko kami:</p>
                                 <ul class="list-unstyled mb-0">
-                                    <li class="mb-2"><strong class="d-block">Alamat Toko:</strong><strong>[WAJIB ISI: Alamat Lengkap Toko Thar'z Computer Anda]</strong></li>
-                                    <li class="mb-2"><strong class="d-block">Jam Operasional:</strong>[Contoh: Senin - Sabtu, pukul 09:00 - 17:00 WIB]</li>
+                                    <li class="mb-2"><strong class="d-block">Alamat Toko:</strong><strong>disana</strong></li>
+                                    <li class="mb-2"><strong class="d-block">Jam Operasional:</strong>pukul 09:00 - 20:00   </li>
                                     <li>Harap informasikan <strong>ID Service (<?php echo htmlspecialchars($service_data['id_service']); ?>)</strong> kepada staf kami.</li>
                                 </ul>
                             </div>
                         </div>
 
                         <div class="col-md-6">
-                             <div class="p-3 border rounded-3 h-100">
+                            <div class="p-3 border rounded-3 h-100">
                                 <h3 class="mb-3"><i class="bi bi-bank"></i> 2. Transfer Bank Manual</h3>
                                 <p>Lakukan transfer ke salah satu rekening resmi berikut:</p>
                                 <ul class="list-unstyled">
                                     <li class="mb-2"><strong>Bank BCA</strong>
                                         <ul class="list-unstyled ps-3">
-                                            <li>No. Rekening: <strong>[WAJIB ISI: Nomor Rekening BCA Anda]</strong></li>
-                                            <li>Atas Nama: <strong>[WAJIB ISI: Nama Sesuai Rekening BCA Anda]</strong></li>
+                                            <li>No. Dana: <strong>[08 berapa?</strong></li>
+                                            <li>Atas Nama: <strong>[asep</strong></li>
                                         </ul>
                                     </li>
-                                    <li class="mb-2"><strong>Bank Mandiri</strong> <small class="text-muted">(Hapus jika tidak ada)</small>
+                                    <li class="mb-2"><strong>Bank BCA</strong>
                                         <ul class="list-unstyled ps-3">
-                                            <li>No. Rekening: <strong>[WAJIB ISI: Nomor Rekening Mandiri Anda]</strong></li>
-                                            <li>Atas Nama: <strong>[WAJIB ISI: Nama Sesuai Rekening Mandiri Anda]</strong></li>
+                                            <li>No. Rekening: <strong>08 berapa?</strong></li>
+                                            <li>Atas Nama: <strong>asep</strong></li>
                                         </ul>
                                     </li>
-                                    </ul>
+                                    <li class="mb-2"><strong>Bank Mandiri</strong> 
+                                        <ul class="list-unstyled ps-3">
+                                            <li>No. Rekening: <strong>08 berapa?</strong></li>
+                                            <li>Atas Nama: <strong>asep</strong></li>
+                                        </ul>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -173,8 +190,8 @@ $koneksi->close();
                         <hr>
                         <p class="mb-1">Konfirmasi dapat dikirimkan melalui salah satu kontak berikut:</p>
                         <ul class="list-unstyled">
-                            <li><i class="bi bi-whatsapp text-success"></i> WhatsApp: <strong>[WAJIB ISI: Nomor WhatsApp Admin Konfirmasi]</strong></li>
-                            <li><i class="bi bi-envelope-at-fill text-danger"></i> Email: <strong>[WAJIB ISI: Alamat Email Admin Konfirmasi]</strong></li>
+                            <li><i class="bi bi-whatsapp text-success"></i> WhatsApp: <strong>08 berapa?</strong></li>
+                            <li><i class="bi bi-envelope-at-fill text-danger"></i> Email: <strong>asep@email.com</strong></li>
                         </ul>
                     </div>
                     <p class="mt-3 fst-italic text-center text-muted">Service Anda akan kami proses/siapkan untuk pengambilan setelah pembayaran Anda berhasil diverifikasi oleh tim kami.</p>
@@ -203,4 +220,5 @@ $koneksi->close();
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>
+
 </html>
