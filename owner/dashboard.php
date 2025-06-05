@@ -9,8 +9,8 @@ session_start();
 //     header("Location: ../login.php");
 //     exit();
 // }
-
 $namaAkun = "Owner"; // Mengatur nama akun sebagai Owner
+
 
 // --- Ambil data statistik dari database ---
 $totalServisHariIni = 0;
@@ -93,7 +93,7 @@ $koneksi->close(); // Tutup koneksi database
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Owner - Thraz Computer</title>
+    <title>Dashboard Owner - Tharz Computer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -235,7 +235,7 @@ $koneksi->close(); // Tutup koneksi database
     <div class="sidebar">
         <div class="logo text-center mb-4">
             <img src="../icons/logo.png" alt="logo Thar'z Computer" class="logo-img">
-            <h1 class="h4 text-dark mt-2 fw-bold">Thraz Computer</h1>
+            <h1 class="h4 text-dark mt-2 fw-bold">Tharz Computer</h1>
             <p class="text-muted small">Owner Panel</p> <div class="logo-line"></div>
         </div>
 
@@ -264,7 +264,7 @@ $koneksi->close(); // Tutup koneksi database
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="laporan_sparepart.php">
-                    <i class="fas fa-boxes"></i>Laporan Sparepart
+                    <i class="fas fa-boxes"></i>Laporan Stok Barang
                 </a>
             </li>
             <li class="nav-item">
