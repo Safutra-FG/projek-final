@@ -223,7 +223,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
                 $jumlah_final_untuk_dibayar = $total_biaya_aktual_dari_detail;
 
                 // Tombol Bayar Sekarang hanya muncul jika status tertentu
-                if ($service_info && ($service_info['status'] == 'selesai' || $service_info['status'] == 'menunggu pembayaran' || $service_info['status'] == 'dikonfirmasi' || $service_info['status'] == 'siap diambil')) : // Sesuaikan status
+                if ($service_info && ($service_info['status'] == 'selesai' || $service_info['status'] == 'dikonfirmasi' || $service_info['status'] == 'siap diambil')) : // Sesuaikan status
                 ?>
                 <?php endif; ?>
                 <div class="detail-row" style="margin-top:25px;">

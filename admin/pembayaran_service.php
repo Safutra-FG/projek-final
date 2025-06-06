@@ -129,14 +129,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['simpan_pembayaran'])) 
             if (!$stmt_bayar->execute()) throw new Exception("Insert `bayar` gagal: " . $stmt_bayar->error);
             $stmt_bayar->close();
 
-            // 3. Update Record di `service`
-            $sql_update_service = "UPDATE service SET status = ? WHERE id_service = ?";
-            $stmt_service_update = $koneksi->prepare($sql_update_service);
-            if (!$stmt_service_update) throw new Exception("Prepare update `service` gagal: " . $koneksi->error);
-
-            $stmt_service_update->bind_param("ss", $status_service_baru, $id_service_proses);
-            if (!$stmt_service_update->execute()) throw new Exception("Update `service` gagal: " . $stmt_service_update->error);
-            $stmt_service_update->close();
 
             // Jika semua berhasil
             $koneksi->commit();
@@ -326,16 +318,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['simpan_pembayaran'])) 
                                 <div class="md:col-span-2">
                                     <label for="catatan_pembayaran" class="block text-sm font-medium text-gray-700">Catatan Tambahan (Opsional)</label>
                                     <textarea id="catatan_pembayaran" name="catatan_pembayaran" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Contoh: Transfer dari rekening Bpk. Agus"></textarea>
-                                </div>
-                                <div>
-                                    <label for="status_service_baru" class="block text-sm font-medium text-gray-700">Status Service Baru (Setelah Bayar) <span class="text-red-500">*</span></label>
-                                    <select id="status_service_baru" name="status_service_baru" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                        <option value="Lunas - Siap Diambil">Lunas - Siap Diambil</option>
-                                        <option value="Menunggu Pengambilan (Lunas)">Menunggu Pengambilan (Lunas)</option>
-                                        <option value="DP Diterima - Proses Lanjut">DP Diterima - Proses Lanjut</option>
-                                        <option value="Selesai">Selesai (Jika status lain lebih cocok)</option>
-                                        {/* Sesuaikan dengan ENUM status di tabel service */}
-                                    </select>
                                 </div>
                             </div>
                             <div class="mt-8 flex justify-end">
