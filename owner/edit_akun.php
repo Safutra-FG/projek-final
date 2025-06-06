@@ -124,6 +124,7 @@ if (!$edit) {
                 <option value="owner" selected>Owner</option>
             <?php endif; ?>
         </select>
+        <div></div>
 
         <button type="submit" class="btn submit" name="update">Update Akun</button>
         <a href="register.php" class="btn back">Kembali</a>

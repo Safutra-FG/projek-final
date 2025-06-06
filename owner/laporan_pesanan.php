@@ -154,7 +154,9 @@ $koneksi->close();
     </style>
 </head>
 <body>
-
+<div>
+    
+</div>
     <div class="sidebar">
         <div class="logo text-center mb-4">
             <img src="../icons/logo.png" alt="logo Thar'z Computer" class="logo-img">

@@ -227,6 +227,9 @@ $resultStokBarang = $koneksi->query($sqlStokBarang);
             &copy; Thar'z Computer 2025
         </div>
     </div>
+    <div>
+        
+    </div>
 
     <div class="main-content">
         <div class="main-header">

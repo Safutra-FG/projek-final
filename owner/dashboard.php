@@ -231,6 +231,7 @@ $koneksi->close(); // Tutup koneksi database
 </head>
 
 <body>
+    <div></div>
 
     <div class="sidebar">
         <div class="logo text-center mb-4">
