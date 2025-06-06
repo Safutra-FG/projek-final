@@ -99,7 +99,7 @@ if (isset($_GET['status'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manajemen Akun - Tharz Computer</title>
+    <title>Manajemen Akun - Thar'z Computer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -250,7 +250,7 @@ if (isset($_GET['status'])) {
     <div class="sidebar">
         <div class="logo text-center mb-4">
             <img src="../icons/logo.png" alt="logo Thar'z Computer" class="logo-img">
-            <h1 class="h4 text-dark mt-2 fw-bold">Tharz Computer</h1>
+            <h1 class="h4 text-dark mt-2 fw-bold">Thar'z Computer</h1>
             <p class="text-muted small">Owner Panel</p>
             <div class="logo-line"></div>
         </div>
@@ -290,7 +290,7 @@ if (isset($_GET['status'])) {
         </ul>
 
         <div class="mt-auto p-4 border-top text-center text-muted small">
-            &copy; Tharz Computer 2025
+            &copy; Thar'z Computer 2025
         </div>
     </div>
 

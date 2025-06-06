@@ -60,7 +60,7 @@ $conn->close(); // Tutup koneksi database
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard Teknisi - Thraz Computer</title>
+    <title>Dashboard Teknisi - Thar'z Computer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/style.css">
@@ -102,7 +102,7 @@ $conn->close(); // Tutup koneksi database
             <div>
                 <div class="flex flex-col items-center mb-10">
                     <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
-                    <h1 class="text-2xl font-extrabold text-white text-center">Thraz Computer</h1>
+                    <h1 class="text-2xl font-extrabold text-white text-center">Thar'z Computer</h1>
                     <p class="text-sm text-gray-400">Teknisi Panel</p> </div>
 
                 <ul class="px-6 space-y-3">
@@ -128,7 +128,7 @@ $conn->close(); // Tutup koneksi database
             </div>
 
             <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
-                &copy; Tharz Computer 2025
+                &copy; Thar'z Computer 2025
             </div>
         </div>
 

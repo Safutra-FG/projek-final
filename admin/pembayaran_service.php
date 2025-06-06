@@ -10,7 +10,7 @@ include '../koneksi.php'; // Sesuaikan path jika perlu
 // $id_user_admin = $_SESSION['admin_id'];
 // $nama_akun_admin = $_SESSION['admin_nama'];
 
-$nama_akun_admin = "Admin Contoh"; // Placeholder, ganti dengan dari session
+$namaAkun = "Admin"; // Placeholder, ganti dengan dari session
 
 $id_service_dipilih = null;
 $service_info = null;
@@ -159,7 +159,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['simpan_pembayaran'])) 
 
 <head>
     <meta charset="UTF-8">
-    <title>Input Pembayaran Service - Thraz Computer</title>
+    <title>Input Pembayaran Service - Thar'z Computer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -173,7 +173,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['simpan_pembayaran'])) 
             <div>
                 <div class="flex flex-col items-center mb-10">
                     <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
-                    <h1 class="text-2xl font-extrabold text-white text-center">Thraz Computer</h1>
+                    <h1 class="text-2xl font-extrabold text-white text-center">Thar'z Computer</h1>
                     <p class="text-sm text-gray-400">Admin Panel</p>
                 </div>
 
@@ -218,17 +218,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['simpan_pembayaran'])) 
             </div>
 
             <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
-                &copy; Tharz Computer 2025
+                &copy; Thar'z Computer 2025
             </div>
         </div>
 
         <div class="flex-1 flex flex-col">
+
             <div class="flex justify-between items-center p-5 bg-white shadow-md">
-                <h2 class="text-2xl font-bold text-gray-800">Input Pembayaran Service</h2>
-                <div class="flex items-center space-x-3">
-                    <span class="text-xl text-gray-600">👤</span>
-                    <span class="text-lg font-semibold text-gray-700"><?php echo htmlspecialchars($nama_akun_admin); ?></span>
-                    <a href="../logout.php" class="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 text-sm font-medium">Logout</a>
+                <h2 class="text-2xl font-bold text-gray-800">Riwayat Transaksi</h2>
+                <div class="flex items-center space-x-5">
+                    <button class="relative text-gray-600 hover:text-blue-600 transition duration-200" title="Pemberitahuan">
+                        <span class="text-2xl">🔔</span>
+                    </button>
+                    <div class="flex items-center space-x-3">
+                        <span class="text-xl text-gray-600">👤</span>
+                        <span class="text-lg font-semibold text-gray-700"><?php echo htmlspecialchars($namaAkun); ?></span>
+                        <a href="../logout.php" class="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 text-sm font-medium">Logout</a>
+                    </div>
                 </div>
             </div>
 

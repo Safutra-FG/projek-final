@@ -57,7 +57,7 @@ $koneksi->close(); // Tutup koneksi setelah semua data diambil
 
 <head>
     <meta charset="UTF-8">
-    <title>Riwayat Transaksi - Thraz Computer</title>
+    <title>Riwayat Transaksi - Thar'z Computer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -70,7 +70,7 @@ $koneksi->close(); // Tutup koneksi setelah semua data diambil
             <div>
                 <div class="flex flex-col items-center mb-10">
                     <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
-                    <h1 class="text-2xl font-extrabold text-white text-center">Thraz Computer</h1>
+                    <h1 class="text-2xl font-extrabold text-white text-center">Thar'z Computer</h1>
                     <p class="text-sm text-gray-400">Admin Panel</p>
                 </div>
 
@@ -115,7 +115,7 @@ $koneksi->close(); // Tutup koneksi setelah semua data diambil
             </div>
 
             <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
-                &copy; Thraz Computer 2025
+                &copy; Thar'z Computer 2025
             </div>
         </div>
 
