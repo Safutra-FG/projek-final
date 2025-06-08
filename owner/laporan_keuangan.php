@@ -18,14 +18,20 @@ $end_date = isset($_GET['end_date']) ? $_GET['end_date'] : '';
 // --- Ambil data keuangan dari database ---
 $totalPendapatan = 0;
 $dataTransaksi = []; // Bisa berupa pendapatan atau pengeluaran
+$dataPendapatanPerTanggal = []; // Data untuk grafik
 
 $where_clause = "WHERE s.status = 'Selesai'";
 if ($start_date && $end_date) {
-    $where_clause .= " AND DATE(s.tanggal_selesai) BETWEEN '$start_date' AND '$end_date'";
+    // Pastikan format tanggal aman untuk query
+    $start_date_safe = $koneksi->real_escape_string($start_date);
+    $end_date_safe = $koneksi->real_escape_string($end_date);
+    $where_clause .= " AND DATE(s.tanggal_selesai) BETWEEN '$start_date_safe' AND '$end_date_safe'";
 } elseif ($start_date) {
-    $where_clause .= " AND DATE(s.tanggal_selesai) >= '$start_date'";
+    $start_date_safe = $koneksi->real_escape_string($start_date);
+    $where_clause .= " AND DATE(s.tanggal_selesai) >= '$start_date_safe'";
 } elseif ($end_date) {
-    $where_clause .= " AND DATE(s.tanggal_selesai) <= '$end_date'";
+    $end_date_safe = $koneksi->real_escape_string($end_date);
+    $where_clause .= " AND DATE(s.tanggal_selesai) <= '$end_date_safe'";
 }
 
 
@@ -39,293 +45,200 @@ if ($resultPendapatan && $resultPendapatan->num_rows > 0) {
 
 // Query untuk detail transaksi (servis selesai sebagai pendapatan)
 $sqlTransaksi = "SELECT
-                    s.id_service AS id_transaksi,
-                    c.nama_customer AS deskripsi,
-                    s.estimasi_harga AS jumlah,
-                    s.tanggal_selesai AS tanggal_transaksi,
-                    'Pendapatan Servis' AS jenis_transaksi
-                  FROM
-                    service s
-                  JOIN
-                    customer c ON s.id_customer = c.id_customer
-                  $where_clause
-                  ORDER BY
-                    s.tanggal_selesai DESC";
+                      s.id_service AS id_transaksi,
+                      c.nama_customer AS deskripsi,
+                      s.estimasi_harga AS jumlah,
+                      s.tanggal_selesai AS tanggal_transaksi,
+                      'Pendapatan Servis' AS jenis_transaksi
+                    FROM
+                      service s
+                    JOIN
+                      customer c ON s.id_customer = c.id_customer
+                    $where_clause
+                    ORDER BY
+                      s.tanggal_selesai DESC";
 
 $resultTransaksi = $koneksi->query($sqlTransaksi);
 if ($resultTransaksi && $resultTransaksi->num_rows > 0) {
     while ($row = $resultTransaksi->fetch_assoc()) {
         $dataTransaksi[] = $row;
+        // Kumpulkan data untuk grafik (pendapatan per tanggal)
+        // Ambil hanya bagian tanggal (Y-m-d) dari timestamp
+        $tanggal = date('Y-m-d', strtotime($row['tanggal_transaksi']));
+        $jumlah = $row['jumlah'];
+        if (!isset($dataPendapatanPerTanggal[$tanggal])) {
+            $dataPendapatanPerTanggal[$tanggal] = 0;
+        }
+        $dataPendapatanPerTanggal[$tanggal] += $jumlah;
     }
 }
 
-// Tambahkan data pengeluaran jika Anda punya tabel pengeluaran terpisah
-// Contoh:
-// $sqlPengeluaran = "SELECT id_pengeluaran AS id_transaksi, deskripsi, jumlah, tanggal_pengeluaran AS tanggal_transaksi, 'Pengeluaran' AS jenis_transaksi FROM pengeluaran";
-// $resultPengeluaran = $koneksi->query($sqlPengeluaran);
-// if ($resultPengeluaran && $resultPengeluaran->num_rows > 0) {
-//     while ($row = $resultPengeluaran->fetch_assoc()) {
-//         $dataTransaksi[] = $row;
-//     }
-// }
-
-// Urutkan semua transaksi berdasarkan tanggal jika ada pengeluaran
-// usort($dataTransaksi, function($a, $b) {
-//     return strtotime($b['tanggal_transaksi']) - strtotime($a['tanggal_transaksi']);
-// });
+// Sort data pendapatan per tanggal untuk grafik (opsional, tapi bagus untuk tampilan)
+ksort($dataPendapatanPerTanggal);
 
 $koneksi->close();
-?>
 
+// Siapkan data untuk JavaScript.
+// Jika $dataPendapatanPerTanggal kosong, kirim array kosong ke JavaScript
+$labels = empty($dataPendapatanPerTanggal) ? '[]' : json_encode(array_keys($dataPendapatanPerTanggal));
+$values = empty($dataPendapatanPerTanggal) ? '[]' : json_encode(array_values($dataPendapatanPerTanggal));
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <title>Laporan Keuangan - Thraz Computer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Keuangan - Thar'z Computer</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        body {
-            display: flex;
-            font-family: sans-serif;
-            min-height: 100vh;
-        }
-        .sidebar {
-            width: 250px;
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-right: 1px solid #dee2e6;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        }
-        .sidebar .logo-img {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            margin-bottom: 10px;
-            border: 2px solid #0d6efd;
-        }
-        .sidebar .logo-line,
-        .sidebar .menu-line {
-            width: 100%;
-            height: 1px;
-            background-color: #adb5bd;
-            margin: 10px 0;
-        }
-        .sidebar .nav-link {
-            padding: 10px 15px;
-            color: #495057;
-            font-weight: 500;
-            transition: background-color 0.2s, color 0.2s;
-            border-radius: 0.25rem;
-            display: flex;
-            align-items: center;
-        }
-        .sidebar .nav-link.active,
-        .sidebar .nav-link:hover {
-            background-color: #e9ecef;
-            color: #007bff;
-        }
-        .sidebar .nav-link i {
-            margin-right: 10px;
-        }
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-        .main-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #dee2e6;
-            margin-bottom: 20px;
-        }
-        .card-statistic {
-            background-color: #fff;
-            padding: 24px;
-            border-radius: 0.75rem;
-            text-align: center;
-            box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
-            transition: transform 0.2s ease-in-out;
-            border: 1px solid rgba(0, 0, 0, 0.125);
-        }
-        .card-statistic:hover {
-            transform: translateY(-5px);
-        }
-        .card-statistic h3 {
-            margin-top: 0;
-            color: #6c757d;
-            font-size: 1.125rem;
-            margin-bottom: 12px;
-            font-weight: 600;
-        }
-        .card-statistic p {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #212529;
-        }
-        /* Tambahkan warna spesifik untuk card */
-        .card-green { background-color: #e8f5e9; color: #43a047; }
-        .card-red { background-color: #ffebee; color: #d32f2f; }
-        .card-blue-light { background-color: #e3f2fd; color: #2196f3; }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            body {
-                flex-direction: column;
-            }
-            .sidebar {
-                width: 100%;
-                height: auto;
-                border-right: none;
-                border-bottom: 1px solid #dee2e6;
-            }
-            .main-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-            .main-header .d-flex {
-                width: 100%;
-                justify-content: space-between;
-            }
-            .main-header .btn {
-                margin-top: 5px;
-            }
-        }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body class="bg-gray-100 text-gray-900 font-sans antialiased">
 
-    <div class="sidebar">
-        <div class="logo text-center mb-4">
-            <img src="../icons/logo.png" alt="logo Thar'z Computer" class="logo-img">
-            <h1 class="h4 text-dark mt-2 fw-bold">Thar'z Computer</h1>
-            <p class="text-muted small">Owner Panel</p> <div class="logo-line"></div>
-        </div>
+    <div class="flex min-h-screen">
 
-        <h2 class="h5 mb-3 text-dark">Menu</h2>
-        <div class="menu-line"></div>
-        <ul class="nav flex-column menu">
-            <li class="nav-item">
-                <a class="nav-link" href="dashboard.php">
-                    <i class="fas fa-home"></i>Dashboard
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="register.php">
-                    <i class="fas fa-users"></i>Kelola Akun
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="stok.php">
-                    <i class="fas fa-wrench"></i>Kelola Sparepart
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link active" aria-current="page" href="laporan_keuangan.php">
-                    <i class="fas fa-chart-line"></i>Laporan Keuangan
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="laporan_sparepart.php">
-                    <i class="fas fa-boxes"></i>Laporan Stok Barang
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="laporan_pesanan.php">
-                    <i class="fas fa-clipboard-list"></i>Laporan Pesanan
-                </a>
-            </li>
-        </ul>
+        <div class="w-64 bg-gray-800 shadow-lg flex flex-col justify-between py-6">
+            <div>
+                <div class="flex flex-col items-center mb-10">
+                    <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
+                    <h1 class="text-2xl font-extrabold text-white text-center">Thraz Computer</h1>
+                    <p class="text-sm text-gray-400">Owner Panel</p>
+                </div>
 
-        <div class="mt-auto p-4 border-top text-center text-muted small">
-            &copy; Thar'z Computer 2025
-        </div>
-    </div>
-        <div></div>
-    <div class="main-content">
-        <div class="main-header">
-            <h2 class="h4 text-dark mb-0">Laporan Keuangan</h2> <div class="d-flex align-items-center">
-                <a href="../logout.php" class="btn btn-outline-danger btn-sm">Logout</a>
-                <button type="button" class="btn btn-outline-secondary btn-sm ms-2" title="Pemberitahuan">
-                    <i class="fas fa-bell"></i>
-                </button>
-                <span class="text-dark fw-semibold ms-2 me-2">
-                    <i class="fas fa-user-circle"></i> <?php echo htmlspecialchars($namaAkun); ?>
-                </span>
+                <ul class="px-6 space-y-3">
+                    <li>
+                        <a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-home w-6 text-center"></i>
+                            <span class="font-medium">Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="register.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                           <i class="fas fa-users w-6 text-center"></i>
+                            <span class="font-medium">Kelola Akun</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="stok.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-wrench w-6 text-center"></i>
+                            <span class="font-medium">Kelola Sparepart</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_keuangan.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200">
+                             <i class="fas fa-chart-line w-6 text-center"></i>
+                            <span class="font-medium">Laporan Keuangan</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_sparepart.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                             <i class="fas fa-boxes w-6 text-center"></i>
+                            <span class="font-medium">Laporan Stok Barang</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_pesanan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                             <i class="fas fa-clipboard-list w-6 text-center"></i>
+                            <span class="font-medium">Laporan Pesanan</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
+                &copy; Tharz Computer 2025
             </div>
         </div>
 
-        <div class="flex-grow-1 p-3">
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">Filter Laporan Keuangan</h5>
+        <div class="flex-1 flex flex-col">
+
+            <div class="flex justify-between items-center p-5 bg-white shadow-md">
+                <h2 class="text-2xl font-bold text-gray-800">Laporan Keuangan</h2>
+                <div class="flex items-center space-x-5">
+                    <button class="relative text-gray-600 hover:text-blue-600 transition duration-200" title="Pemberitahuan">
+                        <i class="fas fa-bell text-xl"></i>
+                    </button>
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-user-circle text-xl text-gray-600"></i>
+                        <span class="text-lg font-semibold text-gray-700"><?php echo htmlspecialchars($namaAkun); ?></span>
+                        <a href="../logout.php" class="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 text-sm font-medium">Logout</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 p-8 overflow-y-auto">
+
+                <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Filter Laporan</h3>
                     <form method="GET" action="laporan_keuangan.php">
-                        <div class="row g-3 align-items-end">
-                            <div class="col-md-4 col-lg-3">
-                                <label for="start_date" class="form-label">Tanggal Mulai:</label>
-                                <input type="date" class="form-control" id="start_date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+                            <div>
+                                <label for="start_date" class="block text-sm font-medium text-gray-700">Tanggal Mulai:</label>
+                                <input type="date" id="start_date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                             </div>
-                            <div class="col-md-4 col-lg-3">
-                                <label for="end_date" class="form-label">Tanggal Akhir:</label>
-                                <input type="date" class="form-control" id="end_date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>">
+                            <div>
+                                <label for="end_date" class="block text-sm font-medium text-gray-700">Tanggal Akhir:</label>
+                                <input type="date" id="end_date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                             </div>
-                            <div class="col-md-4 col-lg-2">
-                                <button type="submit" class="btn btn-primary w-100">Filter</button>
-                            </div>
-                            <div class="col-md-4 col-lg-2">
-                                <a href="laporan_keuangan.php" class="btn btn-outline-secondary w-100">Reset Filter</a>
+                            <div class="flex space-x-3">
+                                <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Filter</button>
+                                <a href="laporan_keuangan.php" class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Reset</a>
                             </div>
                         </div>
                     </form>
                 </div>
-            </div>
 
-            <div class="row g-4 mb-4">
-                <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card-statistic card-green">
-                        <h3>Total Pendapatan (Servis Selesai)</h3>
-                        <p class="h1 mb-0">Rp <?php echo number_format($totalPendapatan, 0, ',', '.'); ?></p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                     <div class="bg-green-100 p-6 rounded-lg shadow-md text-center">
+                        <h3 class="text-lg font-semibold text-green-800">Total Pendapatan</h3>
+                        <p class="text-3xl font-bold text-green-700 mt-2">Rp <?php echo number_format($totalPendapatan ?? 0, 0, ',', '.'); ?></p>
+                        <p class="text-sm text-green-600">dari servis selesai</p>
                     </div>
                 </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Grafik Pendapatan Servis</h3>
+                    <div class="h-80">
+                        <canvas id="pendapatanChart"></canvas>
+                        <p id="noChartDataMessage" class="text-center text-gray-500 mt-4" style="display: none;">Tidak ada data pendapatan untuk ditampilkan dalam grafik pada periode ini.</p>
+                    </div>
                 </div>
 
-            <div class="card shadow-sm mt-4">
-                <div class="card-body">
-                    <h2 class="card-title h5 mb-3 text-dark">Detail Transaksi</h2>
-                    <p class="card-subtitle text-muted mb-4">Rincian pendapatan dari servis yang telah diselesaikan pada periode yang dipilih.</p>
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped">
-                            <thead class="table-light">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Detail Transaksi</h3>
+                    <p class="text-sm text-gray-600 mb-4">Rincian pendapatan dari servis yang telah diselesaikan pada periode yang dipilih.</p>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
                                 <tr>
-                                    <th scope="col">Tanggal Transaksi</th>
-                                    <th scope="col">Jenis Transaksi</th>
-                                    <th scope="col">Deskripsi</th>
-                                    <th scope="col">Jumlah</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis Transaksi</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th>
+                                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="bg-white divide-y divide-gray-200">
                                 <?php if (empty($dataTransaksi)): ?>
                                     <tr>
-                                        <td colspan="4" class="text-center text-muted py-4">Tidak ada data transaksi pada periode ini.</td>
+                                        <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data transaksi pada periode ini.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($dataTransaksi as $transaksi): ?>
                                         <tr>
-                                            <td><?php echo htmlspecialchars($transaksi['tanggal_transaksi']); ?></td>
-                                            <td>
-                                                <span class="badge <?php echo ($transaksi['jenis_transaksi'] == 'Pendapatan Servis' ? 'bg-success' : 'bg-danger'); ?>">
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                                <?php echo htmlspecialchars(date('d M Y', strtotime($transaksi['tanggal_transaksi']))); ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                                                     <?php echo htmlspecialchars($transaksi['jenis_transaksi']); ?>
                                                 </span>
                                             </td>
-                                            <td><?php echo htmlspecialchars($transaksi['deskripsi']); ?></td>
-                                            <td>Rp <?php echo number_format($transaksi['jumlah'], 0, ',', '.'); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                Servis untuk <?php echo htmlspecialchars($transaksi['deskripsi']); ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                                                Rp <?php echo number_format($transaksi['jumlah'], 0, ',', '.'); ?>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
@@ -333,15 +246,88 @@ $koneksi->close();
                         </table>
                     </div>
                 </div>
+
             </div>
 
-            <div class="text-center mt-5">
-                <p class="lead text-muted">Laporan ini dapat disempurnakan dengan kemampuan ekspor data atau grafik.</p>
-            </div>
         </div>
-
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Data yang diambil dari PHP
+        const labels = <?php echo $labels; ?>;
+        const values = <?php echo $values; ?>;
+
+        const chartCanvas = document.getElementById('pendapatanChart');
+        const noDataMessage = document.getElementById('noChartDataMessage');
+
+        // Periksa apakah ada data sebelum membuat grafik
+        if (!labels || labels.length === 0 || !values || values.length === 0) {
+            chartCanvas.style.display = 'none';
+            noDataMessage.style.display = 'block';
+            console.warn("Chart.js: Tidak ada data untuk ditampilkan.");
+            return;
+        } else {
+            chartCanvas.style.display = 'block';
+            noDataMessage.style.display = 'none';
+        }
+
+        // Inisialisasi Grafik
+        const ctx = chartCanvas.getContext('2d');
+        const pendapatanChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Pendapatan Servis (Rp)',
+                    data: values,
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Jumlah Pendapatan (Rp)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return 'Rp ' + value.toLocaleString('id-ID');
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Tanggal'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += 'Rp ' + context.raw.toLocaleString('id-ID');
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+    </script>
 </body>
-</html>
+</html

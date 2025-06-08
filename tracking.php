@@ -216,19 +216,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
                 <?php endif; ?>
 
                 <?php
-                // Jumlah yang akan diteruskan ke fungsi bayar() adalah total aktual dari detail.
-                // Jika tidak ada detail, $total_biaya_aktual_dari_detail akan 0.
-                // Logika bisnis mungkin perlu dipertimbangkan jika ada biaya jasa minimum
-                // meskipun tidak ada item detail (misalnya, biaya pengecekan). Untuk saat ini, ini yang paling aman.
                 $jumlah_final_untuk_dibayar = $total_biaya_aktual_dari_detail;
-
-                // Tombol Bayar Sekarang hanya muncul jika status tertentu
-                if ($service_info && ($service_info['status'] == 'selesai' || $service_info['status'] == 'dikonfirmasi' || $service_info['status'] == 'siap diambil')) : // Sesuaikan status
+                if ($service_info && $jumlah_final_untuk_dibayar > 0 &&  ($service_info['status'] == 'selesai' || $service_info['status'] == 'diperbaiki' || $service_info['status'] == 'siap diambil')) : // Sesuaikan status
                 ?>
+                    <div class="detail-row" style="margin-top:25px;">
+                        <button type="button" onclick="bayar('<?php echo htmlspecialchars($service_info['id_service']); ?>', <?php echo $jumlah_final_untuk_dibayar; ?>)" class="btn">Bayar Sekarang</button>
+                    </div>
                 <?php endif; ?>
-                <div class="detail-row" style="margin-top:25px;">
-                    <button type="button" onclick="bayar('<?php echo htmlspecialchars($service_info['id_service']); ?>', <?php echo $jumlah_final_untuk_dibayar; ?>)" class="btn">Bayar Sekarang</button>
-                </div>
             </div>
         <?php endif; ?>
 

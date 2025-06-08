@@ -86,299 +86,208 @@ if ($resultLatestServices && $resultLatestServices->num_rows > 0) {
 
 $koneksi->close(); // Tutup koneksi database
 ?>
-
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
     <meta charset="UTF-8">
+<<<<<<< HEAD
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Owner - Thar'z Computer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+=======
+    <title>Dashboard Owner - Thraz Computer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+>>>>>>> 7b5c834 (aduhhayy)
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* Custom CSS untuk mempertahankan beberapa gaya asli atau menyesuaikan Bootstrap */
-        body {
-            display: flex;
-            font-family: sans-serif;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 250px;
-            background-color: #f8f9fa; /* Warna latar belakang sidebar Bootstrap */
-            padding: 20px;
-            border-right: 1px solid #dee2e6; /* Border kanan Bootstrap */
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); /* Shadow ringan */
-        }
-
-        .sidebar .logo-img {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            margin-bottom: 10px;
-            border: 2px solid #0d6efd; /* Border biru Bootstrap primary, disesuaikan untuk logo */
-        }
-
-        .sidebar .logo-line,
-        .sidebar .menu-line {
-            width: 100%;
-            height: 1px;
-            background-color: #adb5bd; /* Warna garis Bootstrap */
-            margin: 10px 0;
-        }
-
-        /* Styling untuk menu sidebar Owner */
-        .sidebar .nav-link {
-            padding: 10px 15px; /* Padding untuk area klik */
-            color: #495057; /* Warna teks lebih gelap dari default nav-link */
-            font-weight: 500;
-            transition: background-color 0.2s, color 0.2s;
-            border-radius: 0.25rem;
-            display: flex; /* Untuk ikon sejajar dengan teks */
-            align-items: center;
-        }
-
-        .sidebar .nav-link.active,
-        .sidebar .nav-link:hover {
-            background-color: #e9ecef; /* Latar belakang hover/active */
-            color: #007bff; /* Warna teks primary Bootstrap */
-        }
-
-        .sidebar .nav-link i {
-            margin-right: 10px; /* Spasi antara ikon dan teks */
-        }
-
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .main-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #dee2e6;
-            margin-bottom: 20px;
-        }
-
-        /* Gaya untuk card statistik */
-        .card-statistic {
+        /* Gaya dasar untuk card, agar lebih menarik dan konsisten dengan Tailwind */
+        .card {
             background-color: #fff;
             padding: 24px;
-            border-radius: 0.75rem;
+            border-radius: 12px;
             text-align: center;
-            box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             transition: transform 0.2s ease-in-out;
-            border: 1px solid rgba(0, 0, 0, 0.125);
         }
 
-        .card-statistic:hover {
+        .card:hover {
             transform: translateY(-5px);
         }
 
-        .card-statistic h3 {
+        .card h3 {
             margin-top: 0;
-            color: #6c757d;
-            font-size: 1.125rem;
+            color: #4A5568; /* Warna teks yang lebih gelap */
+            font-size: 1.125rem; /* Ukuran font lebih proporsional */
             margin-bottom: 12px;
-            font-weight: 600;
+            font-weight: 600; /* Sedikit lebih tebal */
         }
 
-        .card-statistic p {
-            font-size: 2.5em;
+        .card p {
+            font-size: 2.25em; /* Ukuran angka lebih besar */
             font-weight: bold;
-            color: #212529;
-        }
-
-        /* Warna spesifik untuk card statistik */
-        .card-blue { background-color: #e0f7fa; color: #007bbd; }
-        .card-yellow { background-color: #fffde7; color: #ffb300; }
-        .card-purple { background-color: #f3e5f5; color: #9c27b0; }
-        .card-green { background-color: #e8f5e9; color: #43a047; }
-        .card-indigo { background-color: #e8eaf6; color: #3f51b5; }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            body {
-                flex-direction: column;
-            }
-            .sidebar {
-                width: 100%;
-                height: auto;
-                border-right: none;
-                border-bottom: 1px solid #dee2e6;
-            }
-            .main-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-            .main-header .d-flex {
-                width: 100%;
-                justify-content: space-between;
-            }
-            .main-header .btn {
-                margin-top: 5px;
-            }
+            color: #2D3748; /* Warna angka lebih gelap */
         }
     </style>
 </head>
+<body class="bg-gray-100 text-gray-900 font-sans antialiased">
 
-<body>
-    <div></div>
+    <div class="flex min-h-screen">
 
-    <div class="sidebar">
-        <div class="logo text-center mb-4">
-            <img src="../icons/logo.png" alt="logo Thar'z Computer" class="logo-img">
-            <h1 class="h4 text-dark mt-2 fw-bold">Thar'z Computer</h1>
-            <p class="text-muted small">Owner Panel</p> <div class="logo-line"></div>
-        </div>
+        <div class="w-64 bg-gray-800 shadow-lg flex flex-col justify-between py-6">
+            <div>
+                <div class="flex flex-col items-center mb-10">
+                    <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
+                    <h1 class="text-2xl font-extrabold text-white text-center">Thraz Computer</h1>
+                    <p class="text-sm text-gray-400">Owner Panel</p>
+                </div>
 
-        <h2 class="h5 mb-3 text-dark">Menu</h2>
-        <div class="menu-line"></div>
-        <ul class="nav flex-column menu">
-            <li class="nav-item">
-                <a class="nav-link active" aria-current="page" href="dashboard.php">
-                    <i class="fas fa-home"></i>Dashboard
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="register.php">
-                    <i class="fas fa-users"></i>Kelola Akun
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="stok.php">
-                    <i class="fas fa-wrench"></i>Kelola Sparepart
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="laporan_keuangan.php">
-                    <i class="fas fa-chart-line"></i>Laporan Keuangan
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="laporan_sparepart.php">
-                    <i class="fas fa-boxes"></i>Laporan Stok Barang
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="laporan_pesanan.php">
-                    <i class="fas fa-clipboard-list"></i>Laporan Pesanan
-                </a>
-            </li>
-        </ul>
+                <ul class="px-6 space-y-3">
+                    <li>
+                        <a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200">
+                            <i class="fas fa-home w-6 text-center"></i>
+                            <span class="font-medium">Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="register.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                           <i class="fas fa-users w-6 text-center"></i>
+                            <span class="font-medium">Kelola Akun</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="stok.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-wrench w-6 text-center"></i>
+                            <span class="font-medium">Kelola Sparepart</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_keuangan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                             <i class="fas fa-chart-line w-6 text-center"></i>
+                            <span class="font-medium">Laporan Keuangan</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_sparepart.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                             <i class="fas fa-boxes w-6 text-center"></i>
+                            <span class="font-medium">Laporan Stok Barang</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_pesanan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                             <i class="fas fa-clipboard-list w-6 text-center"></i>
+                            <span class="font-medium">Laporan Pesanan</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
 
-        <div class="mt-auto p-4 border-top text-center text-muted small">
-            &copy; Thar'z Computer 2025
-        </div>
-    </div>
-
-    <div class="main-content">
-        <div class="main-header">
-            <h2 class="h4 text-dark mb-0">Dashboard Owner</h2> <div class="d-flex align-items-center">
-                <a href="../logout.php" class="btn btn-outline-danger btn-sm">Logout</a>
-                <button type="button" class="btn btn-outline-secondary btn-sm ms-2" title="Pemberitahuan">
-                    <i class="fas fa-bell"></i>
-                </button>
-                <span class="text-dark fw-semibold ms-2 me-2">
-                    <i class="fas fa-user-circle"></i> <?php echo htmlspecialchars($namaAkun); ?>
-                </span>
+            <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
+                &copy; Tharz Computer 2025
             </div>
         </div>
 
-        <div class="flex-grow-1 p-3">
-            <h1 class="h2 text-dark mb-4 text-center">Selamat Datang Owner, Pantau Seluruh Operasi!</h1> <div class="row g-4 mb-4">
-                <div class="col-12 col-md-6 col-lg-4 col-xl-2dot4">
-                    <div class="card-statistic card-blue">
+        <div class="flex-1 flex flex-col">
+
+            <div class="flex justify-between items-center p-5 bg-white shadow-md">
+                <h2 class="text-2xl font-bold text-gray-800">Dashboard Owner</h2>
+                <div class="flex items-center space-x-5">
+                    <button class="relative text-gray-600 hover:text-blue-600 transition duration-200" title="Pemberitahuan">
+                        <i class="fas fa-bell text-xl"></i>
+                    </button>
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-user-circle text-xl text-gray-600"></i>
+                        <span class="text-lg font-semibold text-gray-700"><?php echo htmlspecialchars($namaAkun); ?></span>
+                        <a href="../logout.php" class="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 text-sm font-medium">Logout</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 p-8 overflow-y-auto">
+                <h1 class="text-3xl font-extrabold mb-8 text-center text-gray-800">Selamat Datang Owner, Pantau Seluruh Operasi!</h1>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-10">
+                    <div class="card bg-blue-100 text-blue-800">
                         <h3>Total Servis Hari Ini</h3>
-                        <p class="h1 mb-0"><?php echo $totalServisHariIni; ?></p>
+                        <p class="text-blue-700"><?php echo $totalServisHariIni; ?></p>
                     </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-4 col-xl-2dot4">
-                    <div class="card-statistic card-yellow">
+                    <div class="card bg-yellow-100 text-yellow-800">
                         <h3>Servis Dalam Proses</h3>
-                        <p class="h1 mb-0"><?php echo $servisDalamProses; ?></p>
+                        <p class="text-yellow-700"><?php echo $servisDalamProses; ?></p>
                     </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-4 col-xl-2dot4">
-                    <div class="card-statistic card-purple">
+                    <div class="card bg-purple-100 text-purple-800">
                         <h3>Servis Menunggu Sparepart</h3>
-                        <p class="h1 mb-0"><?php echo $servisMenungguSparepart; ?></p>
+                        <p class="text-purple-700"><?php echo $servisMenungguSparepart; ?></p>
                     </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-4 col-xl-2dot4">
-                    <div class="card-statistic card-green">
+                    <div class="card bg-green-100 text-green-800">
                         <h3>Servis Selesai Hari Ini</h3>
-                        <p class="h1 mb-0"><?php echo $servisSelesaiHariIni; ?></p>
+                        <p class="text-green-700"><?php echo $servisSelesaiHariIni; ?></p>
                     </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-4 col-xl-2dot4">
-                    <div class="card-statistic card-indigo">
+                    <div class="card bg-indigo-100 text-indigo-800">
                         <h3>Estimasi Pendapatan Hari Ini</h3>
-                        <p class="h1 mb-0">Rp <?php echo number_format($totalEstimasiPendapatanHariIni, 0, ',', '.'); ?></p>
+                        <p class="text-indigo-700">Rp <?php echo number_format($totalEstimasiPendapatanHariIni, 0, ',', '.'); ?></p>
                     </div>
                 </div>
-            </div>
 
-            <div class="card shadow-sm mt-4">
-                <div class="card-body">
-                    <h2 class="card-title h5 mb-3 text-dark">Servis Terbaru</h2>
-                    <p class="card-subtitle text-muted mb-4">Berikut adalah daftar servis yang baru saja masuk atau diperbarui.</p>
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped">
-                            <thead class="table-light">
+                <div class="bg-white p-6 rounded-lg shadow-md mt-8">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">Servis Terbaru</h2>
+                    <p class="text-gray-600 mb-4">Berikut adalah daftar servis yang baru saja masuk atau diperbarui.</p>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
                                 <tr>
-                                    <th scope="col">ID Servis</th>
-                                    <th scope="col">Pelanggan</th>
-                                    <th scope="col">Device</th>
-                                    <th scope="col">Status</th>
-                                    <th scope="col">Tanggal</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Servis</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pelanggan</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="bg-white divide-y divide-gray-200">
                                 <?php if (empty($latestServices)): ?>
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted py-4">Tidak ada data servis terbaru.</td>
+                                        <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data servis terbaru.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($latestServices as $service): ?>
                                         <tr>
-                                            <td><?php echo htmlspecialchars($service['id_service']); ?></td>
-                                            <td><?php echo htmlspecialchars($service['nama_customer']); ?></td>
-                                            <td><?php echo htmlspecialchars($service['device']); ?></td>
-                                            <td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <?php echo htmlspecialchars($service['id_service']); ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <?php echo htmlspecialchars($service['nama_customer']); ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <?php echo htmlspecialchars($service['device']); ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                 <?php
                                                     $statusClass = '';
                                                     switch ($service['status']) {
                                                         case 'Dalam Proses':
-                                                            $statusClass = 'bg-warning text-dark';
+                                                            $statusClass = 'bg-yellow-100 text-yellow-800';
                                                             break;
                                                         case 'Menunggu Sparepart':
-                                                            $statusClass = 'bg-info text-dark';
+                                                            $statusClass = 'bg-purple-100 text-purple-800';
                                                             break;
                                                         case 'Selesai':
-                                                            $statusClass = 'bg-success text-white';
+                                                            $statusClass = 'bg-green-100 text-green-800';
                                                             break;
                                                         case 'Dibatalkan':
-                                                            $statusClass = 'bg-danger text-white';
+                                                            $statusClass = 'bg-red-100 text-red-800';
                                                             break;
                                                         default:
-                                                            $statusClass = 'bg-secondary text-white';
+                                                            $statusClass = 'bg-gray-100 text-gray-800';
                                                             break;
                                                     }
                                                 ?>
-                                                <span class="badge <?php echo $statusClass; ?>">
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $statusClass; ?>">
                                                     <?php echo htmlspecialchars($service['status']); ?>
                                                 </span>
                                             </td>
-                                            <td><?php echo htmlspecialchars($service['tanggal']); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <?php echo htmlspecialchars(date('d-m-Y', strtotime($service['tanggal']))); ?>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
@@ -386,16 +295,14 @@ $koneksi->close(); // Tutup koneksi database
                         </table>
                     </div>
                 </div>
+
+                <div class="text-center mt-12">
+                    <p class="text-lg text-gray-600">Gunakan menu di samping untuk mengelola data dan operasi secara detail.</p>
+                </div>
             </div>
 
-            <div class="text-center mt-5">
-                <p class="lead text-muted">Gunakan menu di samping untuk mengelola data dan operasi secara detail.</p>
-            </div>
         </div>
-
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>

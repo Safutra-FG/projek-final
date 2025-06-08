@@ -30,17 +30,17 @@
             border-radius: 50%;
         }
 
-        /* Hero Section Styling */
-        .hero-section {
-            background: linear-gradient(rgba(29, 95, 171, 0.7), rgba(29, 95, 171, 0.7)), url('icons/Logo (2).png') no-repeat center center;
+        
+       .hero-section {
+            background: linear-gradient(rgba(29, 95, 171, 0.7), rgba(29, 95, 171, 0.7)), url('icons/Logo (2).png') no-repeat center 80%; /* Changed to center 80% to move image lower */
             background-size: cover;
             color: white;
-            padding: 80px 20px; /* Padding besar untuk hero section */
+            padding: 80px 20px;
             text-align: center;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 40vh; /* Ketinggian minimal hero section */
+            min-height: 90vh; 
             flex-direction: column;
         }
 

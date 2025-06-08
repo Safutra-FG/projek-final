@@ -1,112 +1,116 @@
 <?php
 session_start();
-
-// Koneksi ke database
 $koneksi = new mysqli("localhost", "root", "", "tharz_computer");
 
-// Periksa koneksi
 if ($koneksi->connect_error) {
     die("Koneksi database gagal: " . $koneksi->connect_error);
 }
 
+// Inisialisasi keranjang jika belum ada
 if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
-$action = $_REQUEST['action'] ?? '';
+$action = $_GET['action'] ?? $_POST['action'] ?? '';
 
-if ($action === 'add') {
-    $id_barang = intval($_POST['id'] ?? 0);
-    $nama_barang = $_POST['name'] ?? '';
-    $harga = floatval($_POST['price'] ?? 0);
-    $quantity = intval($_POST['quantity'] ?? 1);
+switch ($action) {
+    case 'update':
+        $id_barang = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        $quantity = isset($_POST['quantity']) ? intval($_POST['quantity']) : 0;
 
-    // Pastikan ID barang valid
-    if ($id_barang > 0 && $quantity > 0) {
-        // Cek stok barang di database
-        $cekStok = $koneksi->query("SELECT stok FROM stok WHERE id_barang = $id_barang");
-        $data = $cekStok->fetch_assoc();
+        if ($id_barang > 0) {
+            if ($quantity > 0) {
+                // Ambil stok terbaru dari database untuk validasi sisi server
+                $stmt = $koneksi->prepare("SELECT stok FROM stok WHERE id_barang = ?");
+                $stmt->bind_param("i", $id_barang);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                $product = $res->fetch_assoc();
 
-        if ($data && $data['stok'] >= $quantity) {
-            // Jika barang sudah ada di keranjang, tambahkan kuantitasnya
-            if (isset($_SESSION['cart'][$id_barang])) {
-                $_SESSION['cart'][$id_barang] += $quantity;
+                if ($product && $quantity <= $product['stok']) {
+                    $_SESSION['cart'][$id_barang] = $quantity;
+                } else if ($product && $quantity > $product['stok']) {
+                    $_SESSION['cart'][$id_barang] = $product['stok']; // Set ke stok maksimal
+                    echo "<p class='text-red-500'>Jumlah barang melebihi stok yang tersedia untuk barang ID: " . $id_barang . ".</p>";
+                } else {
+                    unset($_SESSION['cart'][$id_barang]); // Hapus jika produk tidak ditemukan
+                }
+                $stmt->close();
             } else {
-                $_SESSION['cart'][$id_barang] = $quantity;
+                unset($_SESSION['cart'][$id_barang]); // Hapus dari keranjang jika kuantitas 0
             }
-            echo "Item berhasil ditambahkan ke keranjang.";
-        } else {
-            echo "Stok tidak cukup untuk jumlah yang diminta.";
         }
-    } else {
-        echo "Data barang tidak valid.";
-    }
-} elseif ($action === 'update') {
-    $id = intval($_POST['id'] ?? 0);
-    $qty = intval($_POST['quantity'] ?? 0);
+        renderCart(); // Render keranjang setelah update
+        break;
 
-    // Cek stok barang di database sebelum update
-    if ($id > 0) {
-        $cekStok = $koneksi->query("SELECT stok FROM stok WHERE id_barang = $id");
-        $data = $cekStok->fetch_assoc();
+    case 'view':
+        renderCart();
+        break;
 
-        if ($data && $data['stok'] >= $qty) {
-            if ($qty > 0) {
-                $_SESSION['cart'][$id] = $qty;
-            } else {
-                unset($_SESSION['cart'][$id]);
+    case 'get_cart_json':
+        header('Content-Type: application/json');
+        echo json_encode($_SESSION['cart']);
+        exit(); // Penting: Hentikan eksekusi setelah mengirim JSON
+        break;
+
+    case 'get_total_price':
+        header('Content-Type: application/json');
+        $total_price = 0;
+        if (!empty($_SESSION['cart'])) {
+            $ids = implode(',', array_keys($_SESSION['cart']));
+            $result_prices = $koneksi->query("SELECT id_barang, harga FROM stok WHERE id_barang IN ($ids)");
+            $prices = [];
+            while ($row = $result_prices->fetch_assoc()) {
+                $prices[$row['id_barang']] = $row['harga'];
             }
-            echo cartView();
-        } else {
-            echo "Stok tidak cukup untuk memperbarui kuantitas.";
+
+            foreach ($_SESSION['cart'] as $id => $qty) {
+                if (isset($prices[$id])) {
+                    $total_price += $prices[$id] * $qty;
+                }
+            }
         }
-    }
-} elseif ($action === 'remove') {
-    $id = intval($_POST['id'] ?? 0);
-    if ($id > 0) {
-        unset($_SESSION['cart'][$id]);
-    }
-    echo cartView();
-} elseif ($action === 'view') {
-    echo cartView();
-} elseif ($action === 'get_cart_json') {
-    header('Content-Type: application/json');
-    echo json_encode($_SESSION['cart']);
-    exit;
+        echo json_encode(['total' => $total_price]);
+        exit(); // Penting: Hentikan eksekusi setelah mengirim JSON
+        break;
+
+    default:
+        // Tampilkan keranjang secara default jika tidak ada action spesifik
+        renderCart();
+        break;
 }
 
-function cartView() {
-    global $koneksi; // Menggunakan koneksi yang sudah ada
+function renderCart() {
+    global $koneksi;
+    $cart_items = $_SESSION['cart'] ?? [];
+    $total_all_items = 0;
 
-    if (empty($_SESSION['cart'])) {
-        return '<i>Keranjang kosong</i>';
+    if (empty($cart_items)) {
+        echo '<p>Keranjang belanja Anda kosong.</p>';
+        return;
     }
 
-    $ids = array_keys($_SESSION['cart']);
-    // Pastikan semua ID adalah integer untuk keamanan
-    $ids = array_map('intval', $ids);
-    $ids_str = implode(',', $ids);
-    if (!$ids_str) {
-        return '<i>Keranjang kosong</i>'; // Seharusnya tidak terjadi jika $_SESSION['cart'] tidak kosong
-    }
+    echo '<div class="space-y-3">';
+    foreach ($cart_items as $id_barang => $quantity) {
+        $stmt = $koneksi->prepare("SELECT nama_barang, harga FROM stok WHERE id_barang = ?");
+        $stmt->bind_param("i", $id_barang);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $item = $result->fetch_assoc();
+        $stmt->close();
 
-    $result = $koneksi->query("SELECT id_barang, nama_barang, harga FROM stok WHERE id_barang IN ($ids_str)");
-    if (!$result) {
-        return '<i>Gagal mengambil data produk: ' . $koneksi->error . '</i>';
+        if ($item) {
+            $subtotal = $item['harga'] * $quantity;
+            $total_all_items += $subtotal;
+            echo "<p>" . htmlspecialchars($item['nama_barang']) . " (" . $quantity . "x) - Rp " . number_format($subtotal, 0, ',', '.') . ",-</p>";
+        } else {
+            // Hapus item dari keranjang jika produk tidak lagi ada
+            unset($_SESSION['cart'][$id_barang]);
+        }
     }
-
-    $html = '<ul style="padding-left: 20px; margin: 0;">';
-    $total = 0;
-    while ($row = $result->fetch_assoc()) {
-        $qty = $_SESSION['cart'][$row['id_barang']];
-        $subtotal = $row['harga'] * $qty;
-        $total += $subtotal;
-        $html .= "<li>{$row['nama_barang']} x {$qty} = Rp " . number_format($subtotal, 0, ',', '.') . "</li>";
-    }
-    $html .= '</ul>';
-    $html .= "<b>Total: Rp " . number_format($total, 0, ',', '.') . "</b>";
-
-    return $html;
+    echo '</div>';
+    // Anda bisa memilih untuk tidak menampilkan total di sini karena sudah ada di tampilan utama
+    // echo '<p class="mt-4 font-bold text-lg">Total: Rp ' . number_format($total_all_items, 0, ',', '.') . ',-</p>';
 }
 
 $koneksi->close();

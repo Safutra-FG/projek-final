@@ -95,12 +95,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($cart)) {
             $status_awal = 'menunggu pembayaran'; // Pastikan ini ada di ENUM tabel transaksi
             $jenis_transaksi = 'penjualan';
 
-            $sql_insert_transaksi = "INSERT INTO transaksi (id_customer, jenis,status, tanggal, total, id_service) 
+            $sql_insert_transaksi = "INSERT INTO transaksi (id_customer, jenis, status, tanggal, total, id_service) 
                                      VALUES (?, ?, ?, ?, ?, NULL)"; // id_service NULL untuk penjualan
             $stmt_trans = $koneksi->prepare($sql_insert_transaksi);
             if (!$stmt_trans) throw new Exception("Prepare statement insert transaksi gagal: " . $koneksi->error);
 
-            $stmt_trans->bind_param("isdsd", $id_customer, $jenis_transaksi, $status_awal, $tanggal_transaksi, $total_belanja);
+            $stmt_trans->bind_param("isssd", $id_customer, $jenis_transaksi, $status_awal, $tanggal_transaksi, $total_belanja);
             if (!$stmt_trans->execute()) throw new Exception("Insert transaksi gagal: " . $stmt_trans->error);
             $id_transaksi_baru = $koneksi->insert_id;
             $stmt_trans->close();
