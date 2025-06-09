@@ -1,13 +1,15 @@
 <?php
-session_start();
-$koneksi = new mysqli("localhost", "root", "", "tharz_computer");
+session_start(); // Pastikan sesi dimulai untuk keranjang
 
-// Periksa koneksi
+// Pastikan file koneksi.php ada dan berisi objek $koneksi
+include 'koneksi.php'; 
+
+// Periksa koneksi database
 if ($koneksi->connect_error) {
     die("Koneksi database gagal: " . $koneksi->connect_error);
 }
 
-// Ambil semua data produk karena filtering akan dilakukan di JavaScript
+// Ambil semua data produk dari database
 // Pastikan Anda mengambil kolom 'gambar' juga dari tabel 'stok'
 $sql = "SELECT id_barang, nama_barang, harga, stok, gambar FROM stok";
 $result = $koneksi->query($sql);
@@ -16,8 +18,12 @@ $result = $koneksi->query($sql);
 $productImageDir = 'icons/products/'; // Sesuaikan dengan lokasi folder gambar Anda
 if (!is_dir($productImageDir)) {
     // Jika direktori tidak ada, buatlah (opsional, untuk development)
-    mkdir($productImageDir, 0777, true);
+    // mkdir($productImageDir, 0777, true); // Uncomment ini jika perlu membuat folder otomatis
 }
+
+// Dummy data untuk nama customer di header
+$namaAkun = "Customer"; 
+
 ?>
 
 <!DOCTYPE html>
@@ -105,6 +111,7 @@ if (!is_dir($productImageDir)) {
             color: #4a5568;
             cursor: pointer;
             transition: color 0.2s ease-in-out;
+            margin-right: 15px; /* Tambahkan jarak ke kanan */
         }
 
         .notification-icon:hover {
@@ -337,7 +344,7 @@ if (!is_dir($productImageDir)) {
             </div>
             <div class="header-right">
                 <span class="notification-icon">&#128276;</span>
-                <div class="customer-name">Customer</div>
+                <div class="customer-name"><?php echo htmlspecialchars($namaAkun); ?></div>
             </div>
         </div>
         <div class="back-to-dashboard-btn-wrapper">
@@ -358,10 +365,11 @@ if (!is_dir($productImageDir)) {
                     <div class="product-image-container">
                         <?php
                         $imagePath = $productImageDir . htmlspecialchars($row['gambar']);
+                        // Pastikan gambar ada dan terbaca, jika tidak tampilkan placeholder
                         if (!empty($row['gambar']) && file_exists($imagePath)) {
                             echo '<img src="' . htmlspecialchars($imagePath) . '" alt="' . htmlspecialchars($row['nama_barang']) . '" class="product-image">';
                         } else {
-                            echo '<span style="color: #a0aec0;">No Image</span>';
+                            echo '<span style="color: #a0aec0;">No Image</span>'; // Atau gunakan gambar placeholder default
                         }
                         ?>
                     </div>
@@ -423,7 +431,8 @@ if (!is_dir($productImageDir)) {
             data.append('id', id_barang);
             data.append('quantity', newQty);
 
-            fetch('checkout.php', {
+            // Kirim request ke 'checkout.php' untuk update sesi keranjang
+            fetch('checkout.php', { // Pastikan ini mengarah ke file yang menangani sesi keranjang
                 method: 'POST',
                 body: data,
             })
@@ -438,7 +447,8 @@ if (!is_dir($productImageDir)) {
         }
 
         function loadCart() {
-            fetch('checkout.php?action=view')
+            // Muat tampilan keranjang dari 'checkout.php'
+            fetch('checkout.php?action=view') // Pastikan ini mengarah ke file yang menangani sesi keranjang
                 .then(response => response.text())
                 .then(html => {
                     document.getElementById('cart-box').innerHTML = html;
@@ -453,7 +463,8 @@ if (!is_dir($productImageDir)) {
         function syncQuantities() {
             const inputs = document.querySelectorAll('.quantity-input');
 
-            fetch('checkout.php?action=get_cart_json')
+            // Ambil data keranjang dalam format JSON dari 'checkout.php'
+            fetch('checkout.php?action=get_cart_json') // Pastikan ini mengarah ke file yang menangani sesi keranjang
                 .then(res => res.json())
                 .then(cart => {
                     inputs.forEach(input => {
@@ -465,7 +476,8 @@ if (!is_dir($productImageDir)) {
 
         // Fungsi baru untuk memuat dan menampilkan total harga
         function loadTotalPrice() {
-            fetch('checkout.php?action=get_total_price')
+            // Ambil total harga dari 'checkout.php'
+            fetch('checkout.php?action=get_total_price') // Pastikan ini mengarah ke file yang menangani sesi keranjang
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('total-price').innerText = formatRupiah(data.total);
@@ -485,12 +497,13 @@ if (!is_dir($productImageDir)) {
 
         function goToCheckout() {
             // Pastikan ada item di keranjang sebelum melanjutkan ke transaksi
-            fetch('checkout.php?action=get_cart_json')
+            fetch('checkout.php?action=get_cart_json') // Pastikan ini mengarah ke file yang menangani sesi keranjang
                 .then(res => res.json())
                 .then(cart => {
                     const hasItems = Object.keys(cart).some(id => cart[id] > 0);
                     if (hasItems) {
-                        window.location.href = 'transaksi_barang.php';
+                        // Arahkan ke halaman transaksi_barang.php untuk final checkout
+                        window.location.href = 'transaksi_barang.php'; 
                     } else {
                         alert('Keranjang belanja masih kosong!');
                     }
@@ -502,7 +515,7 @@ if (!is_dir($productImageDir)) {
 
         // --- Logika Live Search ---
         document.addEventListener('DOMContentLoaded', () => {
-            loadCart(); // Muat keranjang seperti biasa
+            loadCart(); // Muat keranjang saat halaman dimuat
 
             const searchInput = document.getElementById('search-input');
             const productItems = document.querySelectorAll('.product-item');

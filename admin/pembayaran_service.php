@@ -250,7 +250,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['simpan_pembayaran'])) 
                     </button>
                     <div class="flex items-center space-x-3">
                         <span class="text-xl text-gray-600">👤</span>
-                        <span class="text-lg font-semibold text-gray-700"><?php echo htmlspecialchars($namaAkun); ?></span>
+                       <span class="text-lg font-semibold text-gray-700"><?php echo htmlspecialchars($nama_akun_admin); ?></span>
                         <a href="../logout.php" class="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 text-sm font-medium">Logout</a>
                     </div>
                 </div>

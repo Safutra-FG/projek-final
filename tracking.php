@@ -1,6 +1,11 @@
 <?php
 $koneksi = new mysqli("localhost", "root", "", "tharz_computer");
 
+// Check connection
+if ($koneksi->connect_error) {
+    die("Koneksi ke database gagal: " . $koneksi->connect_error);
+}
+
 $service_info = null; // Untuk menyimpan data utama service
 $service_details_list = []; // Untuk menyimpan daftar item dari detail_service
 $error_message = null;
@@ -12,6 +17,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
     if (empty($id_service_input)) {
         $error_message = "ID Service tidak boleh kosong.";
     } else {
+        // Gunakan Prepared Statements untuk keamanan
         $sql = "SELECT
                     s.id_service, s.tanggal, s.device, s.keluhan, s.status,
                     s.estimasi_waktu, s.estimasi_harga, s.tanggal_selesai,
@@ -39,7 +45,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
         $stmt = $koneksi->prepare($sql);
 
         if ($stmt) {
-            $stmt->bind_param("s", $id_service_input);
+            $stmt->bind_param("i", $id_service_input); // 'i' for integer, as id_service is typically INT
             $stmt->execute();
             $hasil = $stmt->get_result();
 
@@ -60,8 +66,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
                         ];
                         $first_row_processed = true;
                     }
-                    if ($row['id_ds'] !== null) {
-                        $current_detail_total = $row['detail_total'] ?: 0;
+                    if ($row['id_ds'] !== null) { // Only add detail if it exists
+                        $current_detail_total = $row['detail_total'] ?? 0; // Use null coalescing for PHP 7+
                         $service_details_list[] = [
                             'nama_barang' => $row['nama_barang'],
                             'jenis_jasa' => $row['jenis_jasa'],
@@ -81,7 +87,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
     }
 }
 
-// Dummy data for account name (not used in display, but present if you want to use it elsewhere)
+// Dummy data for account name
 $namaAkun = "Customer";
 ?>
 
@@ -99,10 +105,10 @@ $namaAkun = "Customer";
             flex-direction: column;
             font-family: sans-serif;
             min-height: 100vh;
-            background-color: #f8f9fa;
+            background-color: #f8f9fa; /* Latar belakang umum yang cerah */
         }
         .navbar {
-            background-color: #ffffff;
+            background-color: #ffffff; /* Navbar tetap putih */
             padding: 15px 20px;
             border-bottom: 1px solid #dee2e6;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
@@ -110,13 +116,19 @@ $namaAkun = "Customer";
         .navbar .logo-img {
             width: 40px;
             height: 40px;
-            border-radius: 50%;
+            /* Jika logo bukan bulat, hapus border-radius dan border */
+            /* border-radius: 50%; */
+            /* border: 2px solid #0d6efd; */
             margin-right: 10px;
-            border: 2px solid #0d6efd;
+        }
+        .navbar .company-name-header {
+            font-weight: bold;
+            font-size: 1.25rem;
+            color: #343a40; /* Nama perusahaan hitam/abu-abu gelap */
         }
         .navbar .nav-link {
             padding: 10px 15px;
-            color: #495057;
+            color: #495057; /* Warna teks link default abu-abu */
             font-weight: 500;
             transition: background-color 0.2s, color 0.2s;
             border-radius: 0.25rem;
@@ -125,8 +137,8 @@ $namaAkun = "Customer";
         }
         .navbar .nav-link.active,
         .navbar .nav-link:hover {
-            background-color: #e9ecef;
-            color: #007bff;
+            background-color: #e9ecef; /* Background hover abu-abu muda */
+            color: #495057; /* Warna teks hover tetap abu-abu atau sedikit lebih gelap */
         }
         .navbar .nav-link i {
             margin-right: 8px;
@@ -155,7 +167,7 @@ $namaAkun = "Customer";
             color: #495057;
         }
         .btn-submit {
-            background-color: #0d6efd; /* Adjusted to match Bootstrap primary button color */
+            background-color: #28a745; /* Tombol submit hijau */
             color: white;
             border: none;
             padding: 10px 20px;
@@ -166,7 +178,7 @@ $namaAkun = "Customer";
             transition: background-color 0.2s ease;
         }
         .btn-submit:hover {
-            background-color: #0a58ca; /* Darker shade for hover */
+            background-color: #218838; /* Hover tombol submit hijau lebih gelap */
         }
         .alert-dismissible .btn-close {
             position: absolute;
@@ -186,10 +198,10 @@ $namaAkun = "Customer";
             border: 1px solid rgba(0, 0, 0, 0.125);
         }
         .service-details h3 {
-            color: #007bff;
+            color: #343a40; /* Judul detail service utama hitam/abu-abu gelap */
             margin-bottom: 20px;
             font-size: 1.5rem;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #dee2e6; /* Garis bawah abu-abu */
             padding-bottom: 10px;
         }
         .detail-row {
@@ -213,9 +225,9 @@ $namaAkun = "Customer";
             color: #495057;
         }
         .status-box {
-            background-color: #e9f5ff;
-            border: 1px solid #b3d7ff;
-            border-left: 5px solid #007bff;
+            background-color: #e6ffe6; /* Light green for status box */
+            border: 1px solid #28a745; /* Green border */
+            border-left: 5px solid #28a745; /* Green left border */
             padding: 15px;
             border-radius: 0.5rem;
             margin-top: 25px;
@@ -225,45 +237,45 @@ $namaAkun = "Customer";
         .status-title {
             font-weight: 700;
             font-size: 1.2rem;
-            color: #007bff;
+            color: #28a745; /* Green for status title */
             margin-bottom: 8px;
         }
         .status-value {
             font-size: 1.8rem;
             font-weight: bold;
-            color: #28a745; /* Green for success/ready, adjust as needed */
+            color: #155724; /* Dark green for status value */
             text-transform: uppercase;
         }
         h4 {
-            color: #007bff;
+            color: #343a40; /* Judul sub-section hitam/abu-abu gelap */
             margin-top: 30px;
             margin-bottom: 15px;
             font-size: 1.2rem;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #dee2e6; /* Garis bawah abu-abu */
             padding-bottom: 8px;
         }
         .detail-item-box {
-            background-color: #f8f9fa;
+            background-color: #f8f9fa; /* Latar belakang item detail abu-abu muda */
             border: 1px solid #e2e6ea;
             padding: 15px;
             border-radius: 0.5rem;
             margin-bottom: 15px;
         }
         .item-title {
-            color: #007bff;
+            color: #343a40; /* Judul item detail hitam/abu-abu gelap */
             margin-bottom: 10px;
             display: block;
             font-size: 1.1rem;
         }
         .total-aktual-box {
-            background-color: #d4edda; /* Light green */
-            border: 1px solid #28a745; /* Green */
+            background-color: #d4edda; /* Light green for total box */
+            border: 1px solid #28a745; /* Green border */
             padding: 15px;
             border-radius: 0.5rem;
             margin-top: 30px;
             font-size: 1.3rem;
             font-weight: bold;
-            color: #155724; /* Dark green */
+            color: #155724; /* Dark green for total text */
             text-align: center;
         }
         .total-aktual-box .detail-label,
@@ -275,8 +287,8 @@ $namaAkun = "Customer";
             flex: 0 0 200px;
         }
         .btn-bayar {
-            background-color: #ffc107; /* Warning color for payment */
-            color: #343a40;
+            background-color: #28a745; /* Tombol bayar hijau */
+            color: white;
             border: none;
             padding: 12px 25px;
             border-radius: 0.5rem;
@@ -291,8 +303,8 @@ $namaAkun = "Customer";
             margin-right: auto;
         }
         .btn-bayar:hover {
-            background-color: #e0a800; /* Darker yellow for hover */
-            color: #343a40;
+            background-color: #218838; /* Hover tombol bayar hijau lebih gelap */
+            color: white;
         }
         .error-message {
             color: #dc3545;
@@ -306,12 +318,125 @@ $namaAkun = "Customer";
         .back-link {
             display: inline-block;
             margin-top: 20px;
-            color: #007bff;
+            color: #495057; /* Kembali ke abu-abu untuk link */
             text-decoration: none;
             font-weight: 500;
         }
         .back-link:hover {
             text-decoration: underline;
+        }
+
+        /* Hero/Welcome Section */
+        .welcome-section {
+            background-color: #e9ecef; /* Abu-abu muda */
+            border-radius: 0.75rem;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.05);
+        }
+        .welcome-section h3 {
+            color: #343a40;
+            margin-bottom: 15px;
+        }
+        .welcome-section p {
+            color: #6c757d;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        .welcome-section .instruction-steps {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .welcome-section .instruction-steps li {
+            background-color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 0.5rem;
+            border: 1px solid #dee2e6;
+            font-weight: 500;
+            color: #495057;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* FAQ Section (reused from service.php, adjusted colors) */
+        .faq-item {
+            margin-bottom: 10px;
+        }
+        .faq-item .faq-question {
+            font-weight: bold;
+            color: #343a40;
+            cursor: pointer;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .faq-item .faq-answer {
+            display: none;
+            padding: 10px 0;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .faq-item.active .faq-answer {
+            display: block;
+        }
+        .faq-item .faq-question i {
+            transition: transform 0.2s ease-in-out;
+            color: #6c757d; /* Ikon chevron kembali ke abu-abu muted */
+        }
+        .faq-item.active .faq-question i {
+            transform: rotate(180deg);
+        }
+
+        /* Footer styles (reused from service.php, adjusted colors) */
+        footer {
+            background-color: #ffffff; /* Footer kembali ke putih */
+            border-top: 1px solid #dee2e6;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        footer .footer-info {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px 40px;
+            margin-bottom: 15px;
+        }
+        footer .footer-info div {
+            flex-basis: auto;
+        }
+        footer .footer-info div strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #343a40; /* Judul info footer kembali ke hitam/abu-abu gelap */
+            font-size: 1rem;
+        }
+        footer .footer-info div p {
+            margin: 0;
+            color: #6c757d; /* Teks paragraf info footer kembali ke abu-abu muted */
+        }
+        footer .social-icons a {
+            color: #6c757d; /* Ikon sosial kembali ke abu-abu muted */
+            margin: 0 8px;
+            font-size: 1.2rem;
+            transition: color 0.2s;
+        }
+        footer .social-icons a:hover {
+            color: #28a745; /* Ikon sosial hover hijau */
+        }
+        footer p a { /* Link Kebijakan Privasi dll. */
+            color: #6c757d !important; /* Teks link kembali ke abu-abu muted */
+        }
+        footer p a:hover {
+            color: #28a745 !important; /* Link hover hijau */
         }
 
 
@@ -353,6 +478,9 @@ $namaAkun = "Customer";
                 flex: none;
                 width: auto;
                 margin-bottom: 5px;
+            }
+            .welcome-section .instruction-steps {
+                flex-direction: column;
             }
         }
     </style>
@@ -403,7 +531,7 @@ $namaAkun = "Customer";
         <h2 class="h4 text-dark mb-0 text-center flex-grow-1">Tracking Service</h2>
     </div>
 
-    <div class="flex-grow-1 p-3">
+    <div class="container py-3">
         <div class="card shadow-sm mb-4">
             <div class="card-body">
                 <h5 class="card-title mb-4 pb-2 border-bottom">Cari Detail Service Anda</h5>
@@ -412,21 +540,21 @@ $namaAkun = "Customer";
                         <label for="id_service" class="form-label">ID Service:</label>
                         <input type="text" class="form-control" name="id_service" id="id_service" value="<?php echo isset($_POST['id_service']) ? htmlspecialchars($_POST['id_service']) : ''; ?>" placeholder="Masukkan ID Service Anda" required>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Tracking</button>
+                    <button type="submit" class="btn btn-submit w-100">Tracking</button>
                 </form>
             </div>
         </div>
 
         <?php if ($error_message): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <?php echo $error_message; ?>
+                <?php echo htmlspecialchars($error_message); ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php endif; ?>
 
         <?php if ($service_info): ?>
             <div class="service-details">
-                <h3>Detail Service Utama</h3>
+                <h3>Detail Service Utama <span class="text-muted">(ID: #<?php echo htmlspecialchars($service_info['id_service']); ?>)</span></h3>
 
                 <div class="detail-row">
                     <div class="detail-label">Tanggal Masuk:</div>
@@ -447,7 +575,7 @@ $namaAkun = "Customer";
 
                 <div class="status-box">
                     <div class="status-title">Status Service</div>
-                    <div class="status-value"><?php echo htmlspecialchars($service_info['status']); ?></div>
+                    <div class="status-value"><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $service_info['status']))); ?></div>
                 </div>
 
                 <div class="detail-row">
@@ -456,7 +584,7 @@ $namaAkun = "Customer";
                 </div>
                 <div class="detail-row">
                     <div class="detail-label">Estimasi Biaya Awal:</div>
-                    <div class="detail-value">Rp <?php echo number_format($service_info['estimasi_harga'] ?: 0, 0, ',', '.'); ?> (Ini hanya perkiraan awal)</div>
+                    <div class="detail-value">Rp <?php echo number_format($service_info['estimasi_harga'] ?? 0, 0, ',', '.'); ?> (Ini hanya perkiraan awal)</div>
                 </div>
                 <div class="detail-row">
                     <div class="detail-label">Tanggal Selesai:</div>
@@ -503,8 +631,8 @@ $namaAkun = "Customer";
                         </div>
                     </div>
 
-                <?php elseif ($_SERVER["REQUEST_METHOD"] == "POST" && $service_info): ?>
-                    <p style="margin-top:20px; color: #555;">Belum ada rincian pengerjaan spesifik (sparepart atau jasa tambahan) yang dicatat untuk service ini.</p>
+                <?php elseif ($_SERVER["REQUEST_METHOD"] == "POST" && $service_info): /* Tampil jika ID ditemukan tapi detail kosong */ ?>
+                    <p style="margin-top:20px; color: #555; text-align: center;">Belum ada rincian pengerjaan spesifik (sparepart atau jasa tambahan) yang dicatat untuk service ini. Silakan hubungi admin untuk info lebih lanjut.</p>
                     <div class="total-aktual-box">
                         <div class="detail-row">
                             <div class="detail-label">TOTAL TAGIHAN:</div>
@@ -515,23 +643,130 @@ $namaAkun = "Customer";
 
                 <?php
                 $jumlah_final_untuk_dibayar = $total_biaya_aktual_dari_detail;
-                if ($service_info && $jumlah_final_untuk_dibayar > 0 &&  ($service_info['status'] == 'selesai' || $service_info['status'] == 'diperbaiki' || $service_info['status'] == 'siap diambil')) : // Sesuaikan status
+                // Tombol Bayar hanya muncul jika ada total biaya aktual > 0 DAN statusnya 'Dikonfirmasi', 'selesai' atau 'siap diambil'
+                if ($service_info && $jumlah_final_untuk_dibayar > 0 &&
+                    ($service_info['status'] == 'dikonfirmasi' || $service_info['status'] == 'selesai' || $service_info['status'] == 'siap diambil')):
                 ?>
                     <div class="detail-row" style="margin-top:25px;">
                         <button type="button" onclick="bayar('<?php echo htmlspecialchars($service_info['id_service']); ?>', <?php echo $jumlah_final_untuk_dibayar; ?>)" class="btn btn-bayar">Bayar Sekarang</button>
                     </div>
                 <?php endif; ?>
             </div>
+        <?php else: /* Tampilan awal ketika halaman dimuat pertama kali atau setelah submit kosong/error */ ?>
+            <div class="welcome-section">
+                <h3>Lacak Status Perbaikan Perangkat Anda</h3>
+                <p>Masukkan ID Service yang Anda terima saat mengajukan perbaikan untuk melihat status terkini, estimasi waktu, dan rincian biaya.</p>
+                <ul class="instruction-steps">
+                    <li><i class="fas fa-hand-point-right me-2"></i>Dapatkan ID Service dari bukti pengajuan.</li>
+                    <li><i class="fas fa-keyboard me-2"></i>Masukkan ID Service ke kolom di atas.</li>
+                    <li><i class="fas fa-search me-2"></i>Klik tombol "Tracking".</li>
+                </ul>
+                <p class="text-muted mt-3">Jika Anda belum mengajukan service, silakan kunjungi halaman <a href="service.php" class="text-decoration-none">Pengajuan Service</a> kami.</p>
+            </div>
         <?php endif; ?>
+
+        <div class="card shadow-sm mt-4">
+            <div class="card-body">
+                <h5 class="card-title mb-4 pb-2 border-bottom text-center">Pertanyaan Seputar Tracking Service (FAQ)</h5>
+                <div class="faq-list">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            Apa itu ID Service? <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            ID Service adalah nomor unik yang diberikan kepada Anda saat pertama kali mengajukan perbaikan perangkat di Thar'z Computer. Nomor ini digunakan untuk melacak status dan detail perbaikan Anda.
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            Di mana saya bisa menemukan ID Service? <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            ID Service biasanya tercetak pada tanda terima atau bukti pengajuan service yang Anda terima dari kami. Jika Anda mengajukan secara online, nomor tersebut akan muncul di halaman konfirmasi dan mungkin dikirimkan melalui email.
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            Kenapa status service saya belum berubah? <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            Update status akan dilakukan secara berkala oleh teknisi kami. Jika Anda merasa status terlalu lama tidak berubah atau ada kekhawatiran, Anda bisa menghubungi customer service kami.
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            Apakah saya bisa langsung membayar setelah service selesai? <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            Ya, jika status service sudah "Selesai" atau "Siap Diambil" dan rincian biaya sudah tersedia, Anda akan melihat tombol "Bayar Sekarang" untuk memproses pembayaran.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <footer class="mt-auto p-4 border-top text-center text-muted small">
-        &copy; Tharz Computer 2025
+    <footer class="mt-auto">
+        <div class="container footer-info">
+            <div>
+                <strong>Alamat Kami</strong>
+                <p>Jl. Perintis Kemerdekaan No. 100</p>
+                <p>Tasikmalaya, Jawa Barat 46123</p>
+            </div>
+            <div>
+                <strong>Jam Operasional</strong>
+                <p>Senin - Jumat: 09:00 - 18:00 WIB</p>
+                <p>Sabtu: 09:00 - 15:00 WIB</p>
+                <p>Minggu: Tutup</p>
+            </div>
+            <div>
+                <strong>Hubungi Kami</strong>
+                <p>Telepon: (0265) 123456</p>
+                <p>Email: info@tharizcomputer.com</p>
+                <p><a href="https://wa.me/6281234567890" target="_blank" class="text-decoration-none text-muted"><i class="fab fa-whatsapp"></i> WhatsApp</a></p>
+            </div>
+        </div>
+        <div class="social-icons mb-2">
+            <a href="#" target="_blank" title="Facebook"><i class="fab fa-facebook"></i></a>
+            <a href="#" target="_blank" title="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="#" target="_blank" title="Twitter"><i class="fab fa-twitter"></i></a>
+        </div>
+        <p>&copy; <?php echo date('Y'); ?> Thar'z Computer. All rights reserved. | <a href="#" class="text-muted text-decoration-none">Kebijakan Privasi</a> | <a href="#" class="text-muted text-decoration-none">Syarat & Ketentuan</a></p>
     </footer>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // FAQ Accordion
+        const faqItems = document.querySelectorAll('.faq-item');
+        faqItems.forEach(item => {
+            item.querySelector('.faq-question').addEventListener('click', () => {
+                // Tutup semua item FAQ yang sedang aktif kecuali yang diklik
+                faqItems.forEach(otherItem => {
+                    if (otherItem !== item && otherItem.classList.contains('active')) {
+                        otherItem.classList.remove('active');
+                    }
+                });
+                // Toggle kelas 'active' pada item yang diklik
+                item.classList.toggle('active');
+            });
+        });
+
+        // Adjust company name header font size for responsiveness
+        function adjustCompanyNameSize() {
+            const companyName = document.querySelector('.company-name-header');
+            if (window.innerWidth <= 576) { // Bootstrap's 'sm' breakpoint
+                companyName.style.fontSize = '1rem';
+            } else {
+                companyName.style.fontSize = '1.25rem';
+            }
+        }
+
+        adjustCompanyNameSize(); // Call on load
+        window.addEventListener('resize', adjustCompanyNameSize); // Call on resize
+    });
+
     function bayar(idService, amountToPay) {
         // Mengarahkan ke halaman transaksi dengan ID service dan jumlah yang harus dibayar.
         window.location.href = 'transaksi_service.php?id_service=' + encodeURIComponent(idService) + '&amount=' + amountToPay;
