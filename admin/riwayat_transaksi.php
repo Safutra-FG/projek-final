@@ -13,26 +13,20 @@ $namaAkun = "Admin"; // Kamu bisa mengambil nama akun dari session jika sudah ad
 $bulan_filter = $_GET['bulan'] ?? date('Y-m'); // Default bulan saat ini (YYYY-MM)
 
 // Query untuk mengambil data transaksi (kolom 'total' di-alias menjadi 'total_harga')
+// Query untuk mengambil data transaksi (kolom 'total' di-alias menjadi 'total_harga')
 $sql_transaksi = "
     SELECT
         t.id_transaksi,
         c.nama_customer,
         t.tanggal AS tanggal_transaksi,
         t.jenis AS jenis_transaksi,
-        GROUP_CONCAT(CONCAT(dt.jumlah, 'x ', s.nama_barang) SEPARATOR ', ') AS sparepart_dibeli,
         t.total AS total_harga
     FROM
         transaksi t
     JOIN
         customer c ON t.id_customer = c.id_customer
-    LEFT JOIN
-        detail_transaksi dt ON t.id_transaksi = dt.id_transaksi
-    LEFT JOIN
-        stok s ON dt.id_barang = s.id_barang
     WHERE
         DATE_FORMAT(t.tanggal, '%Y-%m') = ?
-    GROUP BY
-        t.id_transaksi, c.nama_customer, t.tanggal, t.jenis, t.total
     ORDER BY
         t.tanggal DESC;
 ";
@@ -168,7 +162,6 @@ $koneksi->close(); // Tutup koneksi setelah semua data diambil
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Pelanggan</th>
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis Transaksi</th>
-                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Sparepart Dibeli</th>
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total Harga</th>
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                                 </tr>
@@ -181,16 +174,15 @@ $koneksi->close(); // Tutup koneksi setelah semua data diambil
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['nama_customer']); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['tanggal_transaksi']); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['jenis_transaksi']); ?></td>
-                                            <td class="px-6 py-4 text-sm text-gray-900"><?php echo htmlspecialchars($row['sparepart_dibeli'] ?: 'N/A'); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Rp <?php echo number_format($row['total_harga'], 0, ',', '.'); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                <a href="transaksi_service.php?id=<?php echo htmlspecialchars($row['id_transaksi']); ?>" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-3 rounded-md shadow-sm transition duration-200 text-xs">Detail</a>
+                                                <a href="detail_transaksi.php?id=<?php echo htmlspecialchars($row['id_transaksi']); ?>" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-3 rounded-md shadow-sm transition duration-200 text-xs">Detail</a>
                                             </td>
                                         </tr>
                                     <?php endwhile; ?>
                                 <?php else : ?>
                                     <tr>
-                                        <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada riwayat transaksi untuk bulan ini.</td>
+                                        <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada riwayat transaksi untuk bulan ini.</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
