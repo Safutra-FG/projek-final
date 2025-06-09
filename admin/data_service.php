@@ -74,6 +74,12 @@ $namaAkun = "Admin";
                         </a>
                     </li>
                     <li>
+                        <a href="kelola_penjualan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300  hover:bg-gray-700 hover:text-white transition duration-200">
+                            <span class="text-xl">💰</span>
+                            <span class="font-medium">Kelola Penjualan</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="data_service.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200">
                             <span class="text-xl">📝</span>
                             <span class="font-medium">Data Service</span>

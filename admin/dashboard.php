@@ -93,6 +93,7 @@ $koneksi->close(); // Tutup koneksi database
 
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <title>Dashboard Admin - Thar'z Computer</title>
@@ -116,19 +117,25 @@ $koneksi->close(); // Tutup koneksi database
 
         .card h3 {
             margin-top: 0;
-            color: #4A5568; /* Warna teks yang lebih gelap */
-            font-size: 1.125rem; /* Ukuran font lebih proporsional */
+            color: #4A5568;
+            /* Warna teks yang lebih gelap */
+            font-size: 1.125rem;
+            /* Ukuran font lebih proporsional */
             margin-bottom: 12px;
-            font-weight: 600; /* Sedikit lebih tebal */
+            font-weight: 600;
+            /* Sedikit lebih tebal */
         }
 
         .card p {
-            font-size: 2.25em; /* Ukuran angka lebih besar */
+            font-size: 2.25em;
+            /* Ukuran angka lebih besar */
             font-weight: bold;
-            color: #2D3748; /* Warna angka lebih gelap */
+            color: #2D3748;
+            /* Warna angka lebih gelap */
         }
     </style>
 </head>
+
 <body class="bg-gray-100 text-gray-900 font-sans antialiased">
 
     <div class="flex min-h-screen">
@@ -152,6 +159,12 @@ $koneksi->close(); // Tutup koneksi database
                         <a href="pembayaran_service.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
                             <span class="text-xl">💰</span>
                             <span class="font-medium">Pembayaran Service</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="kelola_penjualan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300  hover:bg-gray-700 hover:text-white transition duration-200">
+                            <span class="text-xl">💰</span>
+                            <span class="font-medium">Kelola Penjualan</span>
                         </a>
                     </li>
                     <li>
@@ -236,7 +249,8 @@ $koneksi->close(); // Tutup koneksi database
                             <tr>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Servis</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pelanggan</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th> <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
                             </tr>
                         </thead>
@@ -261,24 +275,24 @@ $koneksi->close(); // Tutup koneksi database
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                             <?php
-                                                $statusClass = '';
-                                                switch ($service['status']) {
-                                                    case 'Dalam Proses':
-                                                        $statusClass = 'bg-yellow-100 text-yellow-800';
-                                                        break;
-                                                    case 'Menunggu Sparepart':
-                                                        $statusClass = 'bg-purple-100 text-purple-800';
-                                                        break;
-                                                    case 'Selesai':
-                                                        $statusClass = 'bg-green-100 text-green-800';
-                                                        break;
-                                                    case 'Dibatalkan':
-                                                        $statusClass = 'bg-red-100 text-red-800';
-                                                        break;
-                                                    default:
-                                                        $statusClass = 'bg-gray-100 text-gray-800';
-                                                        break;
-                                                }
+                                            $statusClass = '';
+                                            switch ($service['status']) {
+                                                case 'Dalam Proses':
+                                                    $statusClass = 'bg-yellow-100 text-yellow-800';
+                                                    break;
+                                                case 'Menunggu Sparepart':
+                                                    $statusClass = 'bg-purple-100 text-purple-800';
+                                                    break;
+                                                case 'Selesai':
+                                                    $statusClass = 'bg-green-100 text-green-800';
+                                                    break;
+                                                case 'Dibatalkan':
+                                                    $statusClass = 'bg-red-100 text-red-800';
+                                                    break;
+                                                default:
+                                                    $statusClass = 'bg-gray-100 text-gray-800';
+                                                    break;
+                                            }
                                             ?>
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $statusClass; ?>">
                                                 <?php echo htmlspecialchars($service['status']); ?>
@@ -303,4 +317,5 @@ $koneksi->close(); // Tutup koneksi database
     </div>
 
 </body>
+
 </html>

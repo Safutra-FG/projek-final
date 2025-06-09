@@ -22,11 +22,16 @@ $dataPendapatanHarian = []; // Data untuk grafik
 
 $where_clause = "WHERE s.status = 'Selesai'";
 if ($start_date && $end_date) {
-    $where_clause .= " AND DATE(s.tanggal_selesai) BETWEEN '$start_date' AND '$end_date'";
+    // Pastikan format tanggal aman untuk query
+    $start_date_safe = $koneksi->real_escape_string($start_date);
+    $end_date_safe = $koneksi->real_escape_string($end_date);
+    $where_clause .= " AND DATE(s.tanggal_selesai) BETWEEN '$start_date_safe' AND '$end_date_safe'";
 } elseif ($start_date) {
-    $where_clause .= " AND DATE(s.tanggal_selesai) >= '$start_date'";
+    $start_date_safe = $koneksi->real_escape_string($start_date);
+    $where_clause .= " AND DATE(s.tanggal_selesai) >= '$start_date_safe'";
 } elseif ($end_date) {
-    $where_clause .= " AND DATE(s.tanggal_selesai) <= '$end_date'";
+    $end_date_safe = $koneksi->real_escape_string($end_date);
+    $where_clause .= " AND DATE(s.tanggal_selesai) <= '$end_date_safe'";
 }
 
 // Query untuk total pendapatan
@@ -75,12 +80,17 @@ $values = array_values($dataPendapatanHarian);
 
 // Tutup koneksi database
 $koneksi->close();
-?>
 
+// Siapkan data untuk JavaScript.
+// Jika $dataPendapatanPerTanggal kosong, kirim array kosong ke JavaScript
+$labels = empty($dataPendapatanPerTanggal) ? '[]' : json_encode(array_keys($dataPendapatanPerTanggal));
+$values = empty($dataPendapatanPerTanggal) ? '[]' : json_encode(array_values($dataPendapatanPerTanggal));
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <title>Laporan Keuangan - Thraz Computer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Laporan Keuangan - Thraz Computer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -205,7 +215,7 @@ $koneksi->close();
         }
     </style>
 </head>
-<body>
+<body class="bg-gray-100 text-gray-900 font-sans antialiased">
 
     <div class="sidebar">
         <div class="logo text-center mb-4">
@@ -267,36 +277,49 @@ $koneksi->close();
             </div>
         </div>
 
-        <div class="flex-grow-1 p-3">
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">Filter Laporan Keuangan</h5>
+        <div class="flex-1 flex flex-col">
+
+            <div class="flex justify-between items-center p-5 bg-white shadow-md">
+                <h2 class="text-2xl font-bold text-gray-800">Laporan Keuangan</h2>
+                <div class="flex items-center space-x-5">
+                    <button class="relative text-gray-600 hover:text-blue-600 transition duration-200" title="Pemberitahuan">
+                        <i class="fas fa-bell text-xl"></i>
+                    </button>
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-user-circle text-xl text-gray-600"></i>
+                        <span class="text-lg font-semibold text-gray-700"><?php echo htmlspecialchars($namaAkun); ?></span>
+                        <a href="../logout.php" class="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 text-sm font-medium">Logout</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 p-8 overflow-y-auto">
+
+                <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Filter Laporan</h3>
                     <form method="GET" action="laporan_keuangan.php">
-                        <div class="row g-3 align-items-end">
-                            <div class="col-md-4 col-lg-3">
-                                <label for="start_date" class="form-label">Tanggal Mulai:</label>
-                                <input type="date" class="form-control" id="start_date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+                            <div>
+                                <label for="start_date" class="block text-sm font-medium text-gray-700">Tanggal Mulai:</label>
+                                <input type="date" id="start_date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                             </div>
-                            <div class="col-md-4 col-lg-3">
-                                <label for="end_date" class="form-label">Tanggal Akhir:</label>
-                                <input type="date" class="form-control" id="end_date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>">
+                            <div>
+                                <label for="end_date" class="block text-sm font-medium text-gray-700">Tanggal Akhir:</label>
+                                <input type="date" id="end_date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                             </div>
-                            <div class="col-md-4 col-lg-2">
-                                <button type="submit" class="btn btn-primary w-100">Filter</button>
-                            </div>
-                            <div class="col-md-4 col-lg-2">
-                                <a href="laporan_keuangan.php" class="btn btn-outline-secondary w-100">Reset Filter</a>
+                            <div class="flex space-x-3">
+                                <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Filter</button>
+                                <a href="laporan_keuangan.php" class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Reset</a>
                             </div>
                         </div>
                     </form>
                 </div>
-            </div>
 
-            <div class="row g-4 mb-4">
-                <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card-statistic card-green">
-                        <h3>Total Pendapatan (Servis Selesai)</h3>
-                        <p class="h1 mb-0">Rp <?php echo number_format($totalPendapatan, 0, ',', '.'); ?></p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                     <div class="bg-green-100 p-6 rounded-lg shadow-md text-center">
+                        <h3 class="text-lg font-semibold text-green-800">Total Pendapatan</h3>
+                        <p class="text-3xl font-bold text-green-700 mt-2">Rp <?php echo number_format($totalPendapatan ?? 0, 0, ',', '.'); ?></p>
+                        <p class="text-sm text-green-600">dari servis selesai</p>
                     </div>
                 </div>
                 <div class="col-12 col-md-6 col-lg-8">
@@ -309,36 +332,41 @@ $koneksi->close();
                 </div>
             </div>
 
-            <div class="card shadow-sm mt-4">
-                <div class="card-body">
-                    <h2 class="card-title h5 mb-3 text-dark">Detail Transaksi</h2>
-                    <p class="card-subtitle text-muted mb-4">Rincian pendapatan dari servis yang telah diselesaikan pada periode yang dipilih.</p>
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped">
-                            <thead class="table-light">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Detail Transaksi</h3>
+                    <p class="text-sm text-gray-600 mb-4">Rincian pendapatan dari servis yang telah diselesaikan pada periode yang dipilih.</p>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
                                 <tr>
-                                    <th scope="col">Tanggal Transaksi</th>
-                                    <th scope="col">Jenis Transaksi</th>
-                                    <th scope="col">Deskripsi</th>
-                                    <th scope="col">Jumlah</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis Transaksi</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th>
+                                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="bg-white divide-y divide-gray-200">
                                 <?php if (empty($dataTransaksi)): ?>
                                     <tr>
-                                        <td colspan="4" class="text-center text-muted py-4">Tidak ada data transaksi pada periode ini.</td>
+                                        <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data transaksi pada periode ini.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($dataTransaksi as $transaksi): ?>
                                         <tr>
-                                            <td><?php echo htmlspecialchars($transaksi['tanggal_transaksi']); ?></td>
-                                            <td>
-                                                <span class="badge <?php echo ($transaksi['jenis_transaksi'] == 'Pendapatan Servis' ? 'bg-success' : 'bg-danger'); ?>">
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                                <?php echo htmlspecialchars(date('d M Y', strtotime($transaksi['tanggal_transaksi']))); ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                                                     <?php echo htmlspecialchars($transaksi['jenis_transaksi']); ?>
                                                 </span>
                                             </td>
-                                            <td><?php echo htmlspecialchars($transaksi['deskripsi']); ?></td>
-                                            <td>Rp <?php echo number_format($transaksi['jumlah'], 0, ',', '.'); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                Servis untuk <?php echo htmlspecialchars($transaksi['deskripsi']); ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                                                Rp <?php echo number_format($transaksi['jumlah'], 0, ',', '.'); ?>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
@@ -346,13 +374,13 @@ $koneksi->close();
                         </table>
                     </div>
                 </div>
+
             </div>
 
             <div class="text-center mt-5">
                 <p class="lead text-muted"></p>
             </div>
         </div>
-
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -440,4 +468,4 @@ $koneksi->close();
         }
     </script>
 </body>
-</html>
+</html
