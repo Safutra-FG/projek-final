@@ -18,6 +18,7 @@ $end_date = isset($_GET['end_date']) ? $_GET['end_date'] : '';
 // --- Ambil data keuangan dari database ---
 $totalPendapatan = 0;
 $dataTransaksi = []; // Bisa berupa pendapatan atau pengeluaran
+$dataPendapatanHarian = []; // Data untuk grafik
 
 $where_clause = "WHERE s.status = 'Selesai'";
 if ($start_date && $end_date) {
@@ -27,7 +28,6 @@ if ($start_date && $end_date) {
 } elseif ($end_date) {
     $where_clause .= " AND DATE(s.tanggal_selesai) <= '$end_date'";
 }
-
 
 // Query untuk total pendapatan
 $sqlPendapatan = "SELECT SUM(estimasi_harga) AS total_pendapatan FROM service s $where_clause";
@@ -50,30 +50,30 @@ $sqlTransaksi = "SELECT
                     customer c ON s.id_customer = c.id_customer
                   $where_clause
                   ORDER BY
-                    s.tanggal_selesai DESC";
+                    s.tanggal_selesai ASC"; // Order by ASC untuk grafik time-series
 
 $resultTransaksi = $koneksi->query($sqlTransaksi);
 if ($resultTransaksi && $resultTransaksi->num_rows > 0) {
     while ($row = $resultTransaksi->fetch_assoc()) {
         $dataTransaksi[] = $row;
+
+        // Kumpulkan data pendapatan harian untuk grafik
+        $tanggal = date('Y-m-d', strtotime($row['tanggal_transaksi']));
+        if (!isset($dataPendapatanHarian[$tanggal])) {
+            $dataPendapatanHarian[$tanggal] = 0;
+        }
+        $dataPendapatanHarian[$tanggal] += $row['jumlah'];
     }
 }
 
-// Tambahkan data pengeluaran jika Anda punya tabel pengeluaran terpisah
-// Contoh:
-// $sqlPengeluaran = "SELECT id_pengeluaran AS id_transaksi, deskripsi, jumlah, tanggal_pengeluaran AS tanggal_transaksi, 'Pengeluaran' AS jenis_transaksi FROM pengeluaran";
-// $resultPengeluaran = $koneksi->query($sqlPengeluaran);
-// if ($resultPengeluaran && $resultPengeluaran->num_rows > 0) {
-//     while ($row = $resultPengeluaran->fetch_assoc()) {
-//         $dataTransaksi[] = $row;
-//     }
-// }
+// Urutkan data pendapatan harian berdasarkan tanggal
+ksort($dataPendapatanHarian);
 
-// Urutkan semua transaksi berdasarkan tanggal jika ada pengeluaran
-// usort($dataTransaksi, function($a, $b) {
-//     return strtotime($b['tanggal_transaksi']) - strtotime($a['tanggal_transaksi']);
-// });
+// Siapkan data untuk JavaScript
+$labels = array_keys($dataPendapatanHarian);
+$values = array_values($dataPendapatanHarian);
 
+// Tutup koneksi database
 $koneksi->close();
 ?>
 
@@ -82,9 +82,14 @@ $koneksi->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Keuangan - Thar'z Computer</title>
+    <title>Laporan Keuangan - Thraz Computer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js"></script> 
+    
     <style>
         body {
             display: flex;
@@ -205,7 +210,7 @@ $koneksi->close();
     <div class="sidebar">
         <div class="logo text-center mb-4">
             <img src="../icons/logo.png" alt="logo Thar'z Computer" class="logo-img">
-            <h1 class="h4 text-dark mt-2 fw-bold">Thar'z Computer</h1>
+            <h1 class="h4 text-dark mt-2 fw-bold">Thraz Computer</h1>
             <p class="text-muted small">Owner Panel</p> <div class="logo-line"></div>
         </div>
 
@@ -234,7 +239,7 @@ $koneksi->close();
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="laporan_sparepart.php">
-                    <i class="fas fa-boxes"></i>Laporan Stok Barang
+                    <i class="fas fa-boxes"></i>Laporan Sparepart
                 </a>
             </li>
             <li class="nav-item">
@@ -245,10 +250,10 @@ $koneksi->close();
         </ul>
 
         <div class="mt-auto p-4 border-top text-center text-muted small">
-            &copy; Thar'z Computer 2025
+            &copy; Tharz Computer 2025
         </div>
     </div>
-        <div></div>
+
     <div class="main-content">
         <div class="main-header">
             <h2 class="h4 text-dark mb-0">Laporan Keuangan</h2> <div class="d-flex align-items-center">
@@ -294,7 +299,15 @@ $koneksi->close();
                         <p class="h1 mb-0">Rp <?php echo number_format($totalPendapatan, 0, ',', '.'); ?></p>
                     </div>
                 </div>
+                <div class="col-12 col-md-6 col-lg-8">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title mb-3">Grafik Pendapatan per Tanggal</h5>
+                            <canvas id="pendapatanChart"></canvas>
+                        </div>
+                    </div>
                 </div>
+            </div>
 
             <div class="card shadow-sm mt-4">
                 <div class="card-body">
@@ -336,12 +349,95 @@ $koneksi->close();
             </div>
 
             <div class="text-center mt-5">
-                <p class="lead text-muted">Laporan ini dapat disempurnakan dengan kemampuan ekspor data atau grafik.</p>
+                <p class="lead text-muted"></p>
             </div>
         </div>
 
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Data dari PHP untuk Chart.js
+        const labels = <?php echo json_encode($labels); ?>;
+        const values = <?php echo json_encode($values); ?>;
+
+        // --- DEBUGGING CONSOLE LOGS ---
+        console.log("-----------------------------------------");
+        console.log("DEBUG: Data Labels dari PHP:", labels);
+        console.log("DEBUG: Data Values dari PHP:", values);
+        console.log("-----------------------------------------");
+
+        const ctx = document.getElementById('pendapatanChart'); 
+        
+        // --- DEBUGGING: Periksa apakah elemen canvas ditemukan ---
+        if (ctx) { 
+            console.log("DEBUG: Elemen canvas 'pendapatanChart' Ditemukan.");
+            const pendapatanChart = new Chart(ctx, {
+                type: 'line', 
+                data: {
+                    labels: labels, 
+                    datasets: [{
+                        label: 'Pendapatan Harian (Rp)',
+                        data: values, 
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)', 
+                        borderColor: 'rgba(75, 192, 192, 1)', 
+                        borderWidth: 2,
+                        tension: 0.4, 
+                        fill: true 
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, 
+                    scales: {
+                        x: {
+                            type: 'time', 
+                            time: {
+                                unit: 'day', 
+                                tooltipFormat: 'dd MMMM YYYY', // Perbaiki format tooltip (YYYY)
+                                displayFormats: {
+                                    day: 'dd MMM' 
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Tanggal'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Pendapatan (Rp)'
+                            },
+                            ticks: {
+                                callback: function(value, index, ticks) {
+                                    return 'Rp ' + value.toLocaleString('id-ID');
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += 'Rp ' + context.parsed.y.toLocaleString('id-ID');
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            console.error("DEBUG: Elemen canvas dengan ID 'pendapatanChart' TIDAK ditemukan. Pastikan ada di HTML.");
+        }
+    </script>
 </body>
 </html>

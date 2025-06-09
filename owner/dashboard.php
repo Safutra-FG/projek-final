@@ -94,138 +94,35 @@ $koneksi->close(); // Tutup koneksi database
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Owner - Thar'z Computer</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        /* Custom CSS untuk mempertahankan beberapa gaya asli atau menyesuaikan Bootstrap */
-        body {
-            display: flex;
-            font-family: sans-serif;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 250px;
-            background-color: #f8f9fa; /* Warna latar belakang sidebar Bootstrap */
-            padding: 20px;
-            border-right: 1px solid #dee2e6; /* Border kanan Bootstrap */
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); /* Shadow ringan */
-        }
-
-        .sidebar .logo-img {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            margin-bottom: 10px;
-            border: 2px solid #0d6efd; /* Border biru Bootstrap primary, disesuaikan untuk logo */
-        }
-
-        .sidebar .logo-line,
-        .sidebar .menu-line {
-            width: 100%;
-            height: 1px;
-            background-color: #adb5bd; /* Warna garis Bootstrap */
-            margin: 10px 0;
-        }
-
-        /* Styling untuk menu sidebar Owner */
-        .sidebar .nav-link {
-            padding: 10px 15px; /* Padding untuk area klik */
-            color: #495057; /* Warna teks lebih gelap dari default nav-link */
-            font-weight: 500;
-            transition: background-color 0.2s, color 0.2s;
-            border-radius: 0.25rem;
-            display: flex; /* Untuk ikon sejajar dengan teks */
-            align-items: center;
-        }
-
-        .sidebar .nav-link.active,
-        .sidebar .nav-link:hover {
-            background-color: #e9ecef; /* Latar belakang hover/active */
-            color: #007bff; /* Warna teks primary Bootstrap */
-        }
-
-        .sidebar .nav-link i {
-            margin-right: 10px; /* Spasi antara ikon dan teks */
-        }
-
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .main-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #dee2e6;
-            margin-bottom: 20px;
-        }
-
-        /* Gaya untuk card statistik */
-        .card-statistic {
+   <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+     <style>
+        /* Gaya dasar untuk card, agar lebih menarik dan konsisten dengan Tailwind */
+        .card {
             background-color: #fff;
             padding: 24px;
-            border-radius: 0.75rem;
+            border-radius: 12px;
             text-align: center;
-            box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             transition: transform 0.2s ease-in-out;
-            border: 1px solid rgba(0, 0, 0, 0.125);
         }
 
-        .card-statistic:hover {
+        .card:hover {
             transform: translateY(-5px);
         }
 
-        .card-statistic h3 {
+        .card h3 {
             margin-top: 0;
-            color: #6c757d;
-            font-size: 1.125rem;
+            color: #4A5568; /* Warna teks yang lebih gelap */
+            font-size: 1.125rem; /* Ukuran font lebih proporsional */
             margin-bottom: 12px;
-            font-weight: 600;
+            font-weight: 600; /* Sedikit lebih tebal */
         }
 
-        .card-statistic p {
-            font-size: 2.5em;
+        .card p {
+            font-size: 2.25em; /* Ukuran angka lebih besar */
             font-weight: bold;
-            color: #212529;
-        }
-
-        /* Warna spesifik untuk card statistik */
-        .card-blue { background-color: #e0f7fa; color: #007bbd; }
-        .card-yellow { background-color: #fffde7; color: #ffb300; }
-        .card-purple { background-color: #f3e5f5; color: #9c27b0; }
-        .card-green { background-color: #e8f5e9; color: #43a047; }
-        .card-indigo { background-color: #e8eaf6; color: #3f51b5; }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            body {
-                flex-direction: column;
-            }
-            .sidebar {
-                width: 100%;
-                height: auto;
-                border-right: none;
-                border-bottom: 1px solid #dee2e6;
-            }
-            .main-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-            .main-header .d-flex {
-                width: 100%;
-                justify-content: space-between;
-            }
-            .main-header .btn {
-                margin-top: 5px;
-            }
+            color: #2D3748; /* Warna angka lebih gelap */
         }
     </style>
 </head>
