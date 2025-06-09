@@ -80,45 +80,348 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
         }
     }
 }
+
+// Dummy data for account name (not used in display, but present if you want to use it elsewhere)
+$namaAkun = "Customer";
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thar'z Computer - Tracking Service</title>
-    <link rel="stylesheet" href="style.css">
-</head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            font-family: sans-serif;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background-color: #ffffff;
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .navbar .logo-img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid #0d6efd;
+        }
+        .navbar .nav-link {
+            padding: 10px 15px;
+            color: #495057;
+            font-weight: 500;
+            transition: background-color 0.2s, color 0.2s;
+            border-radius: 0.25rem;
+            display: flex;
+            align-items: center;
+        }
+        .navbar .nav-link.active,
+        .navbar .nav-link:hover {
+            background-color: #e9ecef;
+            color: #007bff;
+        }
+        .navbar .nav-link i {
+            margin-right: 8px;
+        }
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .main-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 20px;
+        }
+        .card {
+            box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(0, 0, 0, 0.125);
+        }
+        .form-label {
+            font-weight: 500;
+            color: #495057;
+        }
+        .btn-submit {
+            background-color: #0d6efd; /* Adjusted to match Bootstrap primary button color */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: background-color 0.2s ease;
+        }
+        .btn-submit:hover {
+            background-color: #0a58ca; /* Darker shade for hover */
+        }
+        .alert-dismissible .btn-close {
+            position: absolute;
+            right: 0;
+            padding: 0.5rem 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
 
+        /* Tracking specific styles */
+        .service-details {
+            margin-top: 30px;
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 0.75rem;
+            box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.125);
+        }
+        .service-details h3 {
+            color: #007bff;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .detail-row {
+            display: flex;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 8px;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #343a40;
+            flex: 0 0 180px; /* Fixed width for labels */
+        }
+        .detail-value {
+            flex: 1;
+            color: #495057;
+        }
+        .status-box {
+            background-color: #e9f5ff;
+            border: 1px solid #b3d7ff;
+            border-left: 5px solid #007bff;
+            padding: 15px;
+            border-radius: 0.5rem;
+            margin-top: 25px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        .status-title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: #007bff;
+            margin-bottom: 8px;
+        }
+        .status-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #28a745; /* Green for success/ready, adjust as needed */
+            text-transform: uppercase;
+        }
+        h4 {
+            color: #007bff;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+        .detail-item-box {
+            background-color: #f8f9fa;
+            border: 1px solid #e2e6ea;
+            padding: 15px;
+            border-radius: 0.5rem;
+            margin-bottom: 15px;
+        }
+        .item-title {
+            color: #007bff;
+            margin-bottom: 10px;
+            display: block;
+            font-size: 1.1rem;
+        }
+        .total-aktual-box {
+            background-color: #d4edda; /* Light green */
+            border: 1px solid #28a745; /* Green */
+            padding: 15px;
+            border-radius: 0.5rem;
+            margin-top: 30px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #155724; /* Dark green */
+            text-align: center;
+        }
+        .total-aktual-box .detail-label,
+        .total-aktual-box .detail-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+        .total-aktual-box .detail-label {
+            flex: 0 0 200px;
+        }
+        .btn-bayar {
+            background-color: #ffc107; /* Warning color for payment */
+            color: #343a40;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: background-color 0.2s ease;
+            width: 100%;
+            max-width: 300px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .btn-bayar:hover {
+            background-color: #e0a800; /* Darker yellow for hover */
+            color: #343a40;
+        }
+        .error-message {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 15px;
+            border-radius: 0.5rem;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .navbar .navbar-nav {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .navbar .navbar-toggler {
+                display: block;
+            }
+            .navbar .navbar-collapse {
+                display: none;
+            }
+            .navbar .navbar-collapse.show {
+                display: flex;
+                flex-direction: column;
+            }
+            .main-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            .main-header h2 {
+                width: 100%;
+                text-align: center;
+            }
+            .detail-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .detail-label {
+                flex: none;
+                width: auto;
+                margin-bottom: 5px;
+            }
+            .total-aktual-box .detail-label {
+                flex: none;
+                width: auto;
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
 <body>
 
-    <div class="container">
-        <div class="header">
-            <div class="logo">
-                <img src="icons/logo.png" alt="Logo Thar'z">
-            </div>
-            <div class="company-name">Thar'z Computer</div>
+<nav class="navbar navbar-expand-lg navbar-light">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center" href="#">
+            <img src="icons/logo.png" alt="logo Thar'z Computer" class="logo-img">
+            <span class="company-name-header">THAR'Z COMPUTER</span>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
+            <ul class="navbar-nav mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" href="service.php">
+                        <i class="fas fa-desktop"></i>Pengajuan Service
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="tracking.php">
+                        <i class="fas fa-search-location"></i>Tracking Service
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="index.php">
+                        <i class="fas fa-home"></i>Kembali ke Beranda
+                    </a>
+                </li>
+            </ul>
         </div>
 
-        <div class="menu">
-            <div class="menu-item active">Tracking</div>
-            <div class="menu-item">Garansi</div>
+        <div class="d-flex align-items-center">
+            <span class="text-dark fw-semibold">
+                <i class="fas fa-user-circle"></i> <?php echo htmlspecialchars($namaAkun); ?>
+            </span>
         </div>
+    </div>
+</nav>
 
-        <div class="form-title">Masukkan ID Service yang sudah diberikan:</div>
-        <form method="POST" action="">
-            <div class="form-group">
-                <label for="id_service">ID Service:</label>
-                <input type="text" name="id_service" id="id_service" value="<?php echo isset($_POST['id_service']) ? htmlspecialchars($_POST['id_service']) : ''; ?>" required>
+<div class="main-content">
+    <div class="main-header">
+        <h2 class="h4 text-dark mb-0 text-center flex-grow-1">Tracking Service</h2>
+    </div>
+
+    <div class="flex-grow-1 p-3">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-4 pb-2 border-bottom">Cari Detail Service Anda</h5>
+                <form method="POST" action="">
+                    <div class="mb-3">
+                        <label for="id_service" class="form-label">ID Service:</label>
+                        <input type="text" class="form-control" name="id_service" id="id_service" value="<?php echo isset($_POST['id_service']) ? htmlspecialchars($_POST['id_service']) : ''; ?>" placeholder="Masukkan ID Service Anda" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Tracking</button>
+                </form>
             </div>
-            <button type="submit" class="btn">Tracking</button>
-        </form>
-
-        <a href="index.php" class="back-link">← Kembali ke Beranda</a>
+        </div>
 
         <?php if ($error_message): ?>
-            <div class="error-message"><?php echo $error_message; ?></div>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php echo $error_message; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
         <?php endif; ?>
 
         <?php if ($service_info): ?>
@@ -160,7 +463,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
                     <div class="detail-value"><?php echo htmlspecialchars($service_info['tanggal_selesai'] ?: '-'); ?></div>
                 </div>
 
-
                 <?php if (!empty($service_details_list)): ?>
                     <h4>Rincian Pengerjaan & Biaya Sparepart/Tambahan:</h4>
                     <?php foreach ($service_details_list as $index => $detail): ?>
@@ -194,8 +496,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
                         </div>
                     <?php endforeach; ?>
 
-                    <?php // Tampilkan Total Biaya Aktual dari Detail jika ada detail 
-                    ?>
                     <div class="total-aktual-box">
                         <div class="detail-row">
                             <div class="detail-label">TOTAL TAGIHAN:</div>
@@ -205,8 +505,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
 
                 <?php elseif ($_SERVER["REQUEST_METHOD"] == "POST" && $service_info): ?>
                     <p style="margin-top:20px; color: #555;">Belum ada rincian pengerjaan spesifik (sparepart atau jasa tambahan) yang dicatat untuk service ini.</p>
-                    <?php // Jika tidak ada detail, total tagihan aktual adalah 0 berdasarkan $total_biaya_aktual_dari_detail yang diinisialisasi 0 
-                    ?>
                     <div class="total-aktual-box">
                         <div class="detail-row">
                             <div class="detail-label">TOTAL TAGIHAN:</div>
@@ -220,19 +518,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
                 if ($service_info && $jumlah_final_untuk_dibayar > 0 &&  ($service_info['status'] == 'selesai' || $service_info['status'] == 'diperbaiki' || $service_info['status'] == 'siap diambil')) : // Sesuaikan status
                 ?>
                     <div class="detail-row" style="margin-top:25px;">
-                        <button type="button" onclick="bayar('<?php echo htmlspecialchars($service_info['id_service']); ?>', <?php echo $jumlah_final_untuk_dibayar; ?>)" class="btn">Bayar Sekarang</button>
+                        <button type="button" onclick="bayar('<?php echo htmlspecialchars($service_info['id_service']); ?>', <?php echo $jumlah_final_untuk_dibayar; ?>)" class="btn btn-bayar">Bayar Sekarang</button>
                     </div>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
-
     </div>
-    <script>
-        function bayar(idService, amountToPay) {
-            // Mengarahkan ke halaman transaksi dengan ID service dan jumlah yang harus dibayar.
-            window.location.href = 'transaksi_service.php?id_service=' + encodeURIComponent(idService) + '&amount=' + amountToPay;
-        }
-    </script>
-</body>
 
+    <footer class="mt-auto p-4 border-top text-center text-muted small">
+        &copy; Tharz Computer 2025
+    </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function bayar(idService, amountToPay) {
+        // Mengarahkan ke halaman transaksi dengan ID service dan jumlah yang harus dibayar.
+        window.location.href = 'transaksi_service.php?id_service=' + encodeURIComponent(idService) + '&amount=' + amountToPay;
+    }
+</script>
+</body>
 </html>
