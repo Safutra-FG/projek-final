@@ -10,7 +10,7 @@ include '../koneksi.php'; // Sesuaikan path jika perlu
 // $id_user_admin = $_SESSION['admin_id'];
 // $nama_akun_admin = $_SESSION['admin_nama'];
 
-$nama_akun_admin = "Admin"; // Placeholder, ganti dengan dari session
+$namaAkun = "Admin"; // Placeholder, ganti dengan dari session
 
 $id_service_dipilih = null;
 $service_info = null;
