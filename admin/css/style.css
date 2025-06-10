@@ -1,0 +1,89 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 180px;
+    background-color: rgb(29, 95, 171);
+    border-right: 1px solid #ccc;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px 10px;
+}
+
+.menu-logo .logo-box {
+    width: 30px;
+    height: 30px;
+    background-color: #333;
+    margin-bottom: 30px;
+}
+
+.menu ul {
+    list-style: none;
+}
+
+.menu ul li {
+    margin-bottom: 15px;
+}
+
+.menu ul li a {
+    text-decoration: none;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.help-icon {
+    align-self: center;
+    font-size: 24px;
+    background-color: #dddddd;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 30px;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.topbar {
+    height: 60px;
+    border-bottom: 1px solid #054a9a;
+    display: flex;
+    background-color: rgb(29, 95, 171);
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0 20px;
+    gap: 10px;
+}
+
+.akun .circle {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: #999;
+    display: inline-block;
+    margin-left: 10px;
+}
+
+.dashboard {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
