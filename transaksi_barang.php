@@ -1,12 +1,8 @@
 <?php
 session_start();
 
-<<<<<<< HEAD
 // Pastikan file koneksi.php sudah include dan berisi inisialisasi $koneksi
 // Contoh isi koneksi.php:
-=======
-// Asumsi 'koneksi.php' berisi:
->>>>>>> aeca9770164ffaf46a6a9b32eaebcbe4d610b719
 // $koneksi = new mysqli("localhost", "root", "", "tharz_computer");
 // if ($koneksi->connect_error) {
 //     die("Koneksi database gagal: " . $koneksi->connect_error);
@@ -16,11 +12,7 @@ include 'koneksi.php';
 
 // --- Konfigurasi dan Inisialisasi ---
 // Definisi status transaksi yang valid (sesuaikan dengan ENUM di DB Anda)
-<<<<<<< HEAD
 // define('STATUS_MENUNGGU_PEMBAYARAN', 'menunggu pembayaran'); // Baris ini tidak lagi relevan jika kolom 'status' dihilangkan
-=======
-define('STATUS_MENUNGGU_PEMBAYARAN', 'menunggu pembayaran');
->>>>>>> aeca9770164ffaf46a6a9b32eaebcbe4d610b719
 define('JENIS_TRANSAKSI_PENJUALAN', 'penjualan');
 
 $cart = $_SESSION['cart'] ?? []; 
