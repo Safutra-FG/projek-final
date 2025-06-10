@@ -1,8 +1,10 @@
 <?php
+include '../koneksi.php';
+include 'auth.php';
+
+$namaAkun = getNamaUser();
+
 session_start();
-include '../koneksi.php'; // Sesuaikan path jika berbeda
-
-
 // Tidak ada lagi logika UPDATE di sini karena akan dipindahkan ke edit_service.php
 // Logika ini dihapus:
 /*
@@ -10,10 +12,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_service'])) {
     // ... logika update sebelumnya ...
 }
 */
-?>
-
-<?php
-$namaAkun = "Admin";
 ?>
 
 <!DOCTYPE html>

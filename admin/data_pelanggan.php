@@ -1,8 +1,10 @@
 <?php
-session_start();
-include '../koneksi.php'; // Sesuaikan path jika berbeda
+include '../koneksi.php';
+include 'auth.php';
 
-$namaAkun = "Admin"; // Kamu bisa mengambil nama akun dari session jika sudah ada
+$namaAkun = getNamaUser();
+
+session_start();
 ?>
 
 <!DOCTYPE html>
