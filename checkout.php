@@ -49,9 +49,9 @@ switch ($action) {
 
     case 'get_cart_json':
         header('Content-Type: application/json');
-        echo json_encode($_SESSION['cart']);
-        exit(); // Penting: Hentikan eksekusi setelah mengirim JSON
-        break;
+        echo json_encode($_SESSION['cart']); 
+        exit();
+        // Penting: Hentikan eksekusi setelah mengirim JSON
 
     case 'get_total_price':
         header('Content-Type: application/json');
@@ -72,7 +72,6 @@ switch ($action) {
         }
         echo json_encode(['total' => $total_price]);
         exit(); // Penting: Hentikan eksekusi setelah mengirim JSON
-        break;
 
     default:
         // Tampilkan keranjang secara default jika tidak ada action spesifik

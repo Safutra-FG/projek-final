@@ -138,8 +138,9 @@ if (isset($_GET['hapus'])) {
             header("Location: stok.php?status=error");
             exit();
         }
-        $stmt_delete->close();
+        
     }
+    $stmt_delete->close();
 }
 
 // --- LOGIKA PENCARIAN & PENGAMBILAN DATA ---
