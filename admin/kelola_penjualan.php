@@ -1,6 +1,8 @@
 <?php
-session_start();
-include '../koneksi.php'; // Sesuaikan path koneksi.php
+include '../koneksi.php';
+include 'auth.php';
+
+$namaAkun = getNamaUser();
 
 // Pastikan koneksi database valid
 if (!isset($koneksi) || !$koneksi instanceof mysqli) {

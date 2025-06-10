@@ -1,6 +1,10 @@
 <?php
+include '../koneksi.php';
+include 'auth.php';
+
+$namaAkun = getNamaUser();
+
 session_start();
-include '../koneksi.php'; // Sesuaikan path jika berbeda
 
 // Cek kalau form dikirim
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_stok'])) {
@@ -26,8 +30,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_stok'])) {
         exit();
     }
 }
-
-$namaAkun = "Admin";
 ?>
 
 <!DOCTYPE html>

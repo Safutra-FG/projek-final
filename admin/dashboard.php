@@ -1,16 +1,23 @@
 <?php
 // dashboard.php (untuk peran Admin)
 include '../koneksi.php'; // Pastikan file koneksi.php ada dan benar
+include 'auth.php'; // Menambahkan otentikasi
 
 session_start();
-// Logika otentikasi sederhana (opsional, untuk produksi gunakan yang lebih kuat)
-// Jika Anda memiliki sistem role-based access, pastikan user_role adalah 'admin'
-// if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
-//     header("Location: ../login.php");
-//     exit();
-// }
 
-$namaAkun = "Admin"; // Mengatur nama akun sebagai Admin
+// Cek apakah user sudah login
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../login.php");
+    exit();
+}
+
+// Cek apakah user adalah admin
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+    header("Location: ../login.php");
+    exit();
+}
+
+$namaAkun = getNamaUser(); // Menggunakan fungsi dari auth.php
 
 // --- Ambil data statistik dari database ---
 $totalServisHariIni = 0;

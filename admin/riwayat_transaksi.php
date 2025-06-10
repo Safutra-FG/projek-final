@@ -1,13 +1,13 @@
 <?php
-session_start();
-include '../koneksi.php'; // Path ini sudah benar jika koneksi.php di folder yang sama
+include '../koneksi.php';
+include 'auth.php';
+
+$namaAkun = getNamaUser();
 
 // Pastikan koneksi database sudah dibuat dan valid
 if (!isset($koneksi) || !$koneksi instanceof mysqli) {
     die("Koneksi database belum dibuat atau salah.");
 }
-
-$namaAkun = "Admin"; // Kamu bisa mengambil nama akun dari session jika sudah ada
 
 // Logika untuk filtering bulan (jika ada) akan tetap di sini
 $bulan_filter = $_GET['bulan'] ?? date('Y-m'); // Default bulan saat ini (YYYY-MM)

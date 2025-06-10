@@ -1,6 +1,8 @@
 <?php
+include '../koneksi.php';
+include 'auth.php';
+
 session_start();
-include '../koneksi.php'; // Sesuaikan path jika perlu
 
 // Cek jika admin sudah login, jika belum, redirect ke halaman login
 // if (!isset($_SESSION['admin_id']) || !isset($_SESSION['admin_nama'])) {
@@ -10,7 +12,7 @@ include '../koneksi.php'; // Sesuaikan path jika perlu
 // $id_user_admin = $_SESSION['admin_id'];
 // $nama_akun_admin = $_SESSION['admin_nama'];
 
-$namaAkun = "Admin"; // Placeholder, ganti dengan dari session
+$namaAkun = getNamaUser();
 
 $id_service_dipilih = null;
 $service_info = null;
