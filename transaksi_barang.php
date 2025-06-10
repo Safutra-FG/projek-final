@@ -328,7 +328,7 @@ if (!empty($cart)) {
                     <button type="submit" class="btn btn-success btn-lg">
                         <i class="fas fa-money-check-alt"></i> Selesaikan Pesanan
                     </button>
-                    <a href="cart.php" class="btn btn-outline-secondary btn-lg">
+                    <a href="barang.php" class="btn btn-outline-secondary btn-lg">
                         <i class="fas fa-arrow-left"></i> Kembali ke Keranjang
                     </a>
                 </div>

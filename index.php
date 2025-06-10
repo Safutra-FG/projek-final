@@ -53,7 +53,8 @@
         }
         
         .hero-section {
-            background: linear-gradient(rgba(29, 95, 171, 0.7), rgba(29, 95, 171, 0.7)), url('icons/Logo (2).png') no-repeat center 80%;
+            /* Perubahan di sini untuk background */
+            background: linear-gradient(rgba(0, 70, 170, 0.6), rgba(0, 70, 170, 0.6)), url('icons/Logoo.png') no-repeat center 80%;
             background-size: cover;
             color: white;
             padding: 100px 20px 20px 20px; /* Padding atas ditambah agar teks tidak terlalu menempel ke navbar */

@@ -6,6 +6,13 @@ $koneksi = new mysqli("localhost", "root", "", "tharz_computer");
 if ($koneksi->connect_error) {
     die("Koneksi database gagal: " . $koneksi->connect_error);
 }
+
+// Cek role harus owner (jika ada otentikasi)
+// if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'owner') {
+//     header("Location: ../index.php"); // Pastikan path ke index.php benar
+//     exit();
+// }
+
 $namaAkun = "Owner"; // Mengatur nama akun sebagai Owner
 
 $pesan = ''; // Inisialisasi $pesan di awal agar tidak undefined
@@ -18,24 +25,21 @@ if (isset($_POST['submit'])) {
 
     // Validasi input
     if (empty($nama)) {
-        $pesan = "<div class='alert alert-danger' role='alert'>Nama barang tidak boleh kosong!</div>";
+        $pesan = "<div class='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4' role='alert'>Nama barang tidak boleh kosong!</div>";
     } elseif (!is_numeric($stok) || $stok < 0) {
-        $pesan = "<div class='alert alert-danger' role='alert'>Stok harus berupa angka positif!</div>";
+        $pesan = "<div class='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4' role='alert'>Stok harus berupa angka positif!</div>";
     } elseif (!is_numeric($harga) || $harga < 0) {
-        $pesan = "<div class='alert alert-danger' role='alert'>Harga harus berupa angka positif!</div>";
+        $pesan = "<div class='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4' role='alert'>Harga harus berupa angka positif!</div>";
     } else {
         $stmt = $koneksi->prepare("INSERT INTO stok (nama_barang, stok, harga) VALUES (?, ?, ?)");
         $stmt->bind_param("sii", $nama, $stok, $harga);
 
         if ($stmt->execute()) {
-            $pesan = "<div class='alert alert-success' role='alert'>Barang berhasil ditambahkan!</div>";
-            // Kosongkan nilai POST agar form kembali kosong
-            $_POST = array();
             // Redirect ke halaman yang sama untuk membersihkan parameter POST dari URL
-            header("Location: stok.php"); // Ini akan me-refresh halaman dan menerapkan filter jika ada
+            header("Location: stok.php?status=success_add"); // Tambahkan status untuk pesan
             exit();
         } else {
-            $pesan = "<div class='alert alert-danger' role='alert'>Error: " . $stmt->error . "</div>";
+            $pesan = "<div class='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4' role='alert'>Error: " . $stmt->error . "</div>";
         }
         $stmt->close();
     }
@@ -47,14 +51,22 @@ if (isset($_GET['hapus'])) {
     $stmt = $koneksi->prepare("DELETE FROM stok WHERE id_barang = ?");
     $stmt->bind_param("i", $id_barang);
     if ($stmt->execute()) {
-        $pesan = "<div class='alert alert-success' role='alert'>Barang berhasil dihapus!</div>";
         // Redirect ke halaman yang sama setelah hapus
-        header("Location: stok.php");
+        header("Location: stok.php?status=success_delete"); // Tambahkan status untuk pesan
         exit();
     } else {
-        $pesan = "<div class='alert alert-danger' role='alert'>Gagal menghapus barang: " . $stmt->error . "</div>";
+        $pesan = "<div class='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4' role='alert'>Gagal menghapus barang: " . $stmt->error . "</div>";
     }
     $stmt->close();
+}
+
+// Mengambil pesan dari URL setelah redirect (misal dari tambah/hapus)
+if (isset($_GET['status'])) {
+    if ($_GET['status'] == 'success_add') {
+        $pesan = "<div class='bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4' role='alert'>Barang berhasil ditambahkan!</div>";
+    } elseif ($_GET['status'] == 'success_delete') {
+        $pesan = "<div class='bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4' role='alert'>Barang berhasil dihapus!</div>";
+    }
 }
 
 // --- Logika untuk pencarian dan pengambilan data tabel ---
@@ -80,9 +92,6 @@ $sqlStokBarang = "SELECT
                      nama_barang ASC";
 
 $resultStokBarang = $koneksi->query($sqlStokBarang);
-
-// Jika Anda masih memiliki baris ini, hapus atau komentari.
-// $result = $koneksi->query("SELECT * FROM stok ORDER BY id_barang ASC");
 ?>
 
 <!DOCTYPE html>
@@ -90,250 +99,181 @@ $resultStokBarang = $koneksi->query($sqlStokBarang);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Stok Barang - Thar'z Computer</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Kelola Sparepart - Thraz Computer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        body {
-            display: flex;
-            font-family: sans-serif;
-            min-height: 100vh;
-        }
-        .sidebar {
-            width: 250px;
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-right: 1px solid #dee2e6;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        }
-        .sidebar .logo-img {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            margin-bottom: 10px;
-            border: 2px solid #0d6efd;
-        }
-        .sidebar .logo-line,
-        .sidebar .menu-line {
-            width: 100%;
-            height: 1px;
-            background-color: #adb5bd;
-            margin: 10px 0;
-        }
-        .sidebar .nav-link {
-            padding: 10px 15px;
-            color: #495057;
-            font-weight: 500;
-            transition: background-color 0.2s, color 0.2s;
-            border-radius: 0.25rem;
-            display: flex;
-            align-items: center;
-        }
-        .sidebar .nav-link.active,
-        .sidebar .nav-link:hover {
-            background-color: #e9ecef;
-            color: #007bff;
-        }
-        .sidebar .nav-link i {
-            margin-right: 10px;
-        }
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-        .main-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #dee2e6;
-            margin-bottom: 20px;
-        }
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            body {
-                flex-direction: column;
-            }
-            .sidebar {
-                width: 100%;
-                height: auto;
-                border-right: none;
-                border-bottom: 1px solid #dee2e6;
-            }
-            .main-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-            .main-header .d-flex {
-                width: 100%;
-                justify-content: space-between;
-            }
-            .main-header .btn {
-                margin-top: 5px;
-            }
-        }
-    </style>
 </head>
-<body>
+<body class="bg-gray-100 text-gray-900 font-sans antialiased">
 
-    <div class="sidebar">
-        <div class="logo text-center mb-4">
-            <img src="../icons/logo.png" alt="logo Thar'z Computer" class="logo-img">
-            <h1 class="h4 text-dark mt-2 fw-bold">Thar'z Computer</h1>
-            <p class="text-muted small">Owner Panel</p> <div class="logo-line"></div>
-        </div>
+    <div class="flex min-h-screen">
 
-        <h2 class="h5 mb-3 text-dark">Menu</h2>
-        <div class="menu-line"></div>
-        <ul class="nav flex-column menu">
-            <li class="nav-item">
-                <a class="nav-link" href="dashboard.php">
-                    <i class="fas fa-home"></i>Dashboard
-                </a>
-            </li>
-           <li class="nav-item">
-                <a class="nav-link" href="register.php">
-                    <i class="fas fa-users"></i>Kelola Akun
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link active" href="stok.php">
-                    <i class="fas fa-wrench"></i>Kelola Sparepart
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="laporan_keuangan.php">
-                    <i class="fas fa-chart-line"></i>Laporan Keuangan
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" aria-current="page" href="laporan_sparepart.php">
-                    <i class="fas fa-boxes"></i>Laporan Stok Barang
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="laporan_pesanan.php">
-                    <i class="fas fa-clipboard-list"></i>Laporan Pesanan
-                </a>
-            </li>
-        </ul>
+        <div class="w-64 bg-gray-800 shadow-lg flex flex-col justify-between py-6">
+            <div>
+                <div class="flex flex-col items-center mb-10">
+                    <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
+                    <h1 class="text-2xl font-extrabold text-white text-center">Thraz Computer</h1>
+                    <p class="text-sm text-gray-400">Owner Panel</p>
+                </div>
 
-            <div class="mt-auto p-4 border-top text-center text-muted small">
-            &copy; Thar'z Computer 2025
-        </div>
-    </div>
-    <div>
-        
-    </div>
-
-    <div class="main-content">
-        <div class="main-header">
-            <h2 class="h4 text-dark mb-0">Kelola Sparepart</h2> <div class="d-flex align-items-center">
-                <a href="../logout.php" class="btn btn-outline-danger btn-sm">Logout</a>
-                <button type="button" class="btn btn-outline-secondary btn-sm ms-2" title="Pemberitahuan">
-                    <i class="fas fa-bell"></i>
-                </button>
-                <span class="text-dark fw-semibold ms-2 me-2">
-                    <i class="fas fa-user-circle"></i> <?php echo htmlspecialchars($namaAkun); ?>
-                </span>
+                <ul class="px-6 space-y-3">
+                    <li>
+                        <a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-home w-6 text-center"></i>
+                            <span class="font-medium">Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="register.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                           <i class="fas fa-users w-6 text-center"></i>
+                            <span class="font-medium">Kelola Akun</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="stok.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200">
+                            <i class="fas fa-wrench w-6 text-center"></i>
+                            <span class="font-medium">Kelola Sparepart</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_keuangan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                               <i class="fas fa-chart-line w-6 text-center"></i>
+                            <span class="font-medium">Laporan Keuangan</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_sparepart.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                               <i class="fas fa-boxes w-6 text-center"></i>
+                            <span class="font-medium">Laporan Stok Barang</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_pesanan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                               <i class="fas fa-clipboard-list w-6 text-center"></i>
+                            <span class="font-medium">Laporan Pesanan</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
+                &copy; Thraz Computer 2025
             </div>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-header bg-white fw-bold fs-5 border-bottom">
-                Tambah Barang Baru
+        <div class="flex-1 flex flex-col">
+            <div class="flex justify-between items-center p-5 bg-white shadow-md">
+                <h2 class="text-2xl font-bold text-gray-800">Kelola Sparepart</h2>
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-user-circle text-xl text-gray-600"></i>
+                    <span class="text-lg font-semibold text-gray-700"><?php echo htmlspecialchars($namaAkun); ?></span>
+                    <a href="../logout.php" class="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 text-sm font-medium">Logout</a>
+                </div>
             </div>
-            <div class="card-body">
-                <?php echo $pesan; ?>
 
-                <form method="POST" action="">
-                    <div class="mb-3">
-                        <label for="nama_barang" class="form-label">Nama Barang</label>
-                        <input type="text" class="form-control" id="nama_barang" name="nama_barang" placeholder="Masukkan Nama Barang" value="<?= htmlspecialchars($_POST['nama_barang'] ?? '') ?>" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="stok" class="form-label">Stok</label>
-                        <input type="number" class="form-control" id="stok" name="stok" placeholder="Masukkan Jumlah Stok" min="0" value="<?= htmlspecialchars($_POST['stok'] ?? '') ?>" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="harga" class="form-label">Harga</label>
-                        <input type="number" class="form-control" id="harga" name="harga" placeholder="Masukkan Harga Barang" step="0.01" min="0" value="<?= htmlspecialchars($_POST['harga'] ?? '') ?>" required>
-                    </div>
+            <div class="flex-1 p-8 overflow-y-auto">
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" name="submit" class="btn btn-primary">Tambah Barang</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-3">Tambah Barang Baru</h3>
+                    <?php echo $pesan; // Menampilkan pesan dari PHP ?>
 
-        <div class="card">
-            <div class="card-header bg-white fw-bold fs-5 border-bottom">
-                Daftar Stok Barang
-            </div>
-            <div class="card-body">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3">Cari Barang</h5>
+                    <form method="POST" action="">
+                        <div class="mb-4">
+                            <label for="nama_barang" class="block text-sm font-medium text-gray-700 mb-1">Nama Barang</label>
+                            <input type="text" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" id="nama_barang" name="nama_barang" placeholder="Masukkan Nama Barang" value="<?= htmlspecialchars($_POST['nama_barang'] ?? '') ?>" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="stok" class="block text-sm font-medium text-gray-700 mb-1">Stok</label>
+                            <input type="number" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" id="stok" name="stok" placeholder="Masukkan Jumlah Stok" min="0" value="<?= htmlspecialchars($_POST['stok'] ?? '') ?>" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="harga" class="block text-sm font-medium text-gray-700 mb-1">Harga</label>
+                            <input type="number" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" id="harga" name="harga" placeholder="Masukkan Harga Barang" step="0.01" min="0" value="<?= htmlspecialchars($_POST['harga'] ?? '') ?>" required>
+                        </div>
+
+                        <div class="flex space-x-3">
+                            <button type="submit" name="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Tambah Barang</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-3">Daftar Stok Barang</h3>
+                    
+                    <div class="bg-gray-50 p-4 rounded-lg shadow-sm mb-4">
+                        <h5 class="text-lg font-semibold text-gray-800 mb-3">Cari Barang</h5>
                         <form method="GET" action="stok.php">
-                            <div class="row g-3 align-items-end">
-                                <div class="col-md-6 col-lg-6">
-                                    <label for="search_nama" class="form-label">Cari Nama Barang:</label>
-                                    <input type="text" class="form-control" id="search_nama" name="search_nama" value="<?php echo htmlspecialchars($search_nama); ?>" placeholder="Cari nama barang...">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                                <div class="md:col-span-2">
+                                    <label for="search_nama" class="block text-sm font-medium text-gray-700 mb-1">Cari Nama Barang:</label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <i class="fas fa-search text-gray-400"></i>
+                                        </div>
+                                        <input type="text" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" id="search_nama" name="search_nama" value="<?php echo htmlspecialchars($search_nama); ?>" placeholder="Cari nama barang...">
+                                    </div>
                                 </div>
-                                <div class="col-md-3 col-lg-3">
-                                    <button type="submit" class="btn btn-primary w-100">Cari</button>
-                                </div>
-                                <div class="col-md-3 col-lg-3">
-                                    <a href="stok.php" class="btn btn-outline-secondary w-100">Reset</a>
+                                <div class="flex space-x-3">
+                                    <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Cari</button>
+                                    <a href="stok.php" class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Reset</a>
                                 </div>
                             </div>
                         </form>
                     </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Stok</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga</th>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <?php if ($resultStokBarang && $resultStokBarang->num_rows > 0): ?>
+                                    <?php while($row = $resultStokBarang->fetch_assoc()): ?>
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center"><?= htmlspecialchars($row['id_barang']) ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?= htmlspecialchars($row['nama_barang']) ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                                <?php
+                                                    $stokVal = $row['stok'];
+                                                    $stokClass = '';
+                                                    if ($stokVal <= 5) {
+                                                        $stokClass = 'bg-red-100 text-red-800'; // Menipis
+                                                    } elseif ($stokVal <= 10) {
+                                                        $stokClass = 'bg-yellow-100 text-yellow-800'; // Hampir Habis
+                                                    } else {
+                                                        $stokClass = 'bg-green-100 text-green-800'; // Cukup
+                                                    }
+                                                ?>
+                                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full <?= $stokClass; ?>">
+                                                    <?= htmlspecialchars($stokVal); ?>
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">Rp <?= number_format($row['harga'], 0, ',', '.') ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-center">
+                                                <a href="edit_stok.php?id=<?= $row['id_barang'] ?>" class="text-yellow-600 hover:text-yellow-900 mx-1 px-3 py-1 rounded-md bg-yellow-100 transition duration-200 inline-flex items-center text-xs">
+                                                    <i class="fas fa-edit mr-1"></i>Edit
+                                                </a>
+                                                <a href="?hapus=<?= $row['id_barang'] ?>" class="text-red-600 hover:text-red-900 mx-1 px-3 py-1 rounded-md bg-red-100 transition duration-200 inline-flex items-center text-xs" onclick="return confirm('Yakin ingin menghapus barang ini?')">
+                                                    <i class="fas fa-trash-alt mr-1"></i>Hapus
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                <?php else: ?>
+                                    <tr><td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada data barang atau tidak ditemukan hasil pencarian.</td></tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th class="text-center">ID</th>
-                                <th>Nama</th>
-                                <th class="text-center">Stok</th>
-                                <th>Harga</th>
-                                <th class="text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php
-                            // Gunakan $resultStokBarang untuk menampilkan data
-                            if ($resultStokBarang && $resultStokBarang->num_rows > 0): ?>
-                                <?php while($row = $resultStokBarang->fetch_assoc()): ?>
-                                    <tr>
-                                        <td class="text-center"><?= htmlspecialchars($row['id_barang']) ?></td>
-                                        <td><?= htmlspecialchars($row['nama_barang']) ?></td>
-                                        <td class="text-center"><?= htmlspecialchars($row['stok']) ?></td>
-                                        <td>Rp <?= number_format($row['harga'], 0, ',', '.') ?></td>
-                                        <td class="text-center">
-                                            <a href="edit_stok.php?id=<?= $row['id_barang'] ?>" class="btn btn-warning btn-sm">Edit</a>
-                                            <a href="?hapus=<?= $row['id_barang'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menghapus barang ini?')">Hapus</a>
-                                        </td>
-                                    </tr>
-                                <?php endwhile; ?>
-                            <?php else: ?>
-                                <tr><td colspan="5" class="text-center">Belum ada data barang atau tidak ditemukan hasil pencarian.</td></tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
+
             </div>
         </div>
     </div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>
 </html>
 <?php $koneksi->close(); ?>
