@@ -16,9 +16,6 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'owner') {
 $pesan = ''; // Inisialisasi $pesan di awal
 $namaAkun = "Owner"; // Mengatur nama akun sebagai Owner
 
-// Variabel pencarian (search_username) DIHAPUS dari sini
-// $search_username = isset($_GET['search_username']) ? $koneksi->real_escape_string($_GET['search_username']) : '';
-
 // Proses Tambah Akun
 if (isset($_POST['tambah'])) {
     $username = trim($_POST['username']);
@@ -27,9 +24,9 @@ if (isset($_POST['tambah'])) {
 
     // Validasi input tambah akun
     if (empty($username)) {
-        $pesan = "<div class='alert alert-danger' role='alert'>Nama pengguna tidak boleh kosong!</div>";
+        $pesan = "<div class='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4' role='alert'>Nama pengguna tidak boleh kosong!</div>";
     } elseif (empty($password_input)) {
-        $pesan = "<div class='alert alert-danger' role='alert'>Password tidak boleh kosong!</div>";
+        $pesan = "<div class='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4' role='alert'>Password tidak boleh kosong!</div>";
     } else {
         $password_hashed = password_hash($password_input, PASSWORD_DEFAULT); // Hash password
 
@@ -39,16 +36,16 @@ if (isset($_POST['tambah'])) {
         $cek_result = $cek->get_result();
 
         if ($cek_result->num_rows > 0) {
-            $pesan = "<div class='alert alert-warning' role='alert'>Nama pengguna sudah digunakan!</div>";
+            $pesan = "<div class='bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4' role='alert'>Nama pengguna sudah digunakan!</div>";
         } else {
             $stmt = $koneksi->prepare("INSERT INTO user (username, password, role) VALUES (?, ?, ?)");
             $stmt->bind_param("sss", $username, $password_hashed, $role);
             if ($stmt->execute()) {
-                $pesan = "<div class='alert alert-success' role='alert'>Akun berhasil dibuat!</div>";
+                // Gunakan parameter URL untuk pesan sukses, bukan langsung echo
                 header("Location: " . $_SERVER['PHP_SELF'] . "?status=success_add");
                 exit();
             } else {
-                $pesan = "<div class='alert alert-danger' role='alert'>Gagal membuat akun: " . $stmt->error . "</div>";
+                $pesan = "<div class='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4' role='alert'>Gagal membuat akun: " . $stmt->error . "</div>";
             }
         }
         $cek->close();
@@ -61,17 +58,15 @@ if (isset($_GET['delete'])) {
     $stmt = $koneksi->prepare("DELETE FROM user WHERE id_user = ? AND role IN ('admin', 'teknisi')");
     $stmt->bind_param("i", $id);
     if ($stmt->execute()) {
-        $pesan = "<div class='alert alert-success' role='alert'>Akun berhasil dihapus!</div>";
         header("Location: " . $_SERVER['PHP_SELF'] . "?status=success_delete");
         exit();
     } else {
-        $pesan = "<div class='alert alert-danger' role='alert'>Gagal menghapus akun: " . $stmt->error . "</div>";
+        $pesan = "<div class='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4' role='alert'>Gagal menghapus akun: " . $stmt->error . "</div>";
     }
     $stmt->close();
 }
 
-// Mengambil semua data user TANPA filter pencarian
-// $where_clause_user DIHAPUS dari sini
+// Mengambil semua data user
 $sqlUsers = "SELECT
                 id_user,
                 username,
@@ -86,304 +81,164 @@ $resultUsers = $koneksi->query($sqlUsers);
 // Mengambil pesan dari URL setelah redirect (misal dari tambah/hapus)
 if (isset($_GET['status'])) {
     if ($_GET['status'] == 'success_add') {
-        $pesan = "<div class='alert alert-success' role='alert'>Akun berhasil dibuat!</div>";
+        $pesan = "<div class='bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4' role='alert'>Akun berhasil dibuat!</div>";
     } elseif ($_GET['status'] == 'success_delete') {
-        $pesan = "<div class='alert alert-success' role='alert'>Akun berhasil dihapus!</div>";
+        $pesan = "<div class='bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4' role='alert'>Akun berhasil dihapus!</div>";
     }
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manajemen Akun - Thar'z Computer</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Manajemen Akun - Thraz Computer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        body {
-            display: flex;
-            font-family: sans-serif;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 250px;
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-right: 1px solid #dee2e6;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        }
-
-        .sidebar .logo-img {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            margin-bottom: 10px;
-            border: 2px solid #0d6efd;
-        }
-
-        .sidebar .logo-line,
-        .sidebar .menu-line {
-            width: 100%;
-            height: 1px;
-            background-color: #adb5bd;
-            margin: 10px 0;
-        }
-
-        .sidebar .nav-link {
-            padding: 10px 15px;
-            color: #495057;
-            font-weight: 500;
-            transition: background-color 0.2s, color 0.2s;
-            border-radius: 0.25rem;
-            display: flex;
-            align-items: center;
-        }
-
-        .sidebar .nav-link.active,
-        .sidebar .nav-link:hover {
-            background-color: #e9ecef;
-            color: #007bff;
-        }
-
-        .sidebar .nav-link i {
-            margin-right: 10px;
-        }
-
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .main-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #dee2e6;
-            margin-bottom: 20px;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            body {
-                flex-direction: column;
-            }
-
-            .sidebar {
-                width: 100%;
-                height: auto;
-                border-right: none;
-                border-bottom: 1px solid #dee2e6;
-            }
-
-            .main-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-
-            .main-header .d-flex {
-                width: 100%;
-                justify-content: space-between;
-            }
-
-            .main-header .btn {
-                margin-top: 5px;
-            }
-        }
-
-        /* Custom styles for Edit/Delete buttons to match the image */
-        .btn.edit, .btn.delete {
-            padding: .25rem .75rem; /* Menyesuaikan padding agar tidak terlalu besar */
-            font-size: .875rem; /* Ukuran font lebih kecil */
-            border-radius: .3rem; /* Membulatkan sudut sedikit, sesuaikan jika perlu */
-            box-shadow: none; /* Menghilangkan shadow default Bootstrap jika ada */
-            display: inline-block; /* Penting untuk margin antar tombol */
-            margin: 0 .15rem; /* Sedikit margin antar tombol */
-        }
-
-        .btn.edit {
-            background-color: #ffc107; /* Kuning */
-            border-color: #ffc107;
-            color: #212529; /* Teks hitam/gelap */
-        }
-
-        .btn.edit:hover {
-            background-color: #e0a800; /* Kuning lebih gelap saat hover */
-            border-color: #e0a800;
-        }
-
-        .btn.delete {
-            background-color: #dc3545; /* Merah */
-            border-color: #dc3545;
-            color: #fff; /* Teks putih */
-        }
-
-        .btn.delete:hover {
-            background-color: #c82333; /* Merah lebih gelap saat hover */
-            border-color: #c82333;
-        }
-
-        /* Style untuk tombol Owner yang tidak bisa dihapus */
-        .btn.delete.owner-disabled { /* Gunakan kelas khusus untuk owner */
-            background-color: #e0e0e0 !important; /* Pastikan override */
-            border-color: #e0e0e0 !important;
-            color: #6c757d !important;
-            cursor: not-allowed !important;
-            padding: .25rem .75rem;
-            font-size: .875rem;
-            border-radius: .3rem;
-            pointer-events: none; /* Mencegah klik */
-        }
-    </style>
 </head>
+<body class="bg-gray-100 text-gray-900 font-sans antialiased">
 
-<body>
-    <div></div>
-    <div class="sidebar">
-        <div class="logo text-center mb-4">
-            <img src="../icons/logo.png" alt="logo Thar'z Computer" class="logo-img">
-            <h1 class="h4 text-dark mt-2 fw-bold">Thar'z Computer</h1>
-            <p class="text-muted small">Owner Panel</p>
-            <div class="logo-line"></div>
-        </div>
+    <div class="flex min-h-screen">
 
-        <h2 class="h5 mb-3 text-dark">Menu</h2>
-        <div class="menu-line"></div>
-        <ul class="nav flex-column menu">
-            <li class="nav-item">
-                <a class="nav-link" href="dashboard.php">
-                    <i class="fas fa-home"></i>Dashboard
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link active" href="register.php">
-                    <i class="fas fa-users"></i>Kelola Akun
-                </a>
-            <li class="nav-item">
-                <a class="nav-link" href="stok.php">
-                    <i class="fas fa-wrench"></i>Kelola Sparepart
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="laporan_keuangan.php">
-                    <i class="fas fa-chart-line"></i>Laporan Keuangan
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" aria-current="page" href="laporan_sparepart.php">
-                    <i class="fas fa-boxes"></i>Laporan Stok Barang
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="laporan_pesanan.php">
-                    <i class="fas fa-clipboard-list"></i>Laporan Pesanan
-                </a>
-            </li>
-        </ul>
+        <div class="w-64 bg-gray-800 shadow-lg flex flex-col justify-between py-6">
+            <div>
+                <div class="flex flex-col items-center mb-10">
+                    <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
+                    <h1 class="text-2xl font-extrabold text-white text-center">Thraz Computer</h1>
+                    <p class="text-sm text-gray-400">Owner Panel</p>
+                </div>
 
-        <div class="mt-auto p-4 border-top text-center text-muted small">
-            &copy; Thar'z Computer 2025
-        </div>
-    </div>
-
-    <div class="main-content">
-        <div class="main-header">
-            <h2 class="h4 text-dark mb-0">Kelola Akun</h2>
-            <div class="d-flex align-items-center">
-                <a href="../logout.php" class="btn btn-outline-danger btn-sm">Logout</a>
-                <button type="button" class="btn btn-outline-secondary btn-sm ms-2" title="Pemberitahuan">
-                    <i class="fas fa-bell"></i>
-                </button>
-                <span class="text-dark fw-semibold ms-2 me-2">
-                    <i class="fas fa-user-circle"></i> <?php echo htmlspecialchars($namaAkun); ?>
-                </span>
+                <ul class="px-6 space-y-3">
+                    <li>
+                        <a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-home w-6 text-center"></i>
+                            <span class="font-medium">Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="register.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200">
+                           <i class="fas fa-users w-6 text-center"></i>
+                            <span class="font-medium">Kelola Akun</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="stok.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-wrench w-6 text-center"></i>
+                            <span class="font-medium">Kelola Sparepart</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_keuangan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                               <i class="fas fa-chart-line w-6 text-center"></i>
+                            <span class="font-medium">Laporan Keuangan</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_sparepart.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                               <i class="fas fa-boxes w-6 text-center"></i>
+                            <span class="font-medium">Laporan Stok Barang</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_pesanan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                               <i class="fas fa-clipboard-list w-6 text-center"></i>
+                            <span class="font-medium">Laporan Pesanan</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
+                &copy; Thraz Computer 2025
             </div>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-header bg-white fw-bold fs-5 border-bottom">
-                Tambah Akun Baru
-            </div>
-            <div class="card-body">
-                <?php if ($pesan) echo "<p class='message'><strong>$pesan</strong></p>"; ?>
-                <form method="POST">
-                    <div class="mb-3">
-                        <label for="username_tambah" class="form-label">Username:</label>
-                        <input type="text" class="form-control" placeholder="Masukan Username!" id="username_tambah" name="username" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="password_tambah" class="form-label">Password:</label>
-                        <input type="password" class="form-control" placeholder="Masukan Password!" id="password_tambah" name="password" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="role_tambah">Role:</label>
-                        <select class="form-control" id="role_tambah" name="role" required>
-                            <option value="admin">Admin</option>
-                            <option value="teknisi">Teknisi</option>
-                        </select>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary submit" name="tambah">Buat Akun</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header bg-white fw-bold fs-5 border-bottom">
-                Daftar Akun
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th class="text-center">No</th>
-                                <th>Username</th>
-                                <th class="text-center">Role</th>
-                                <th class="text-center">Aksi</th> </tr>
-                        </thead>
-                        <tbody>
-                            <?php $no = 1;
-                            // Query mengambil semua data tanpa filter pencarian
-                            if ($resultUsers && $resultUsers->num_rows > 0):
-                                while ($row = $resultUsers->fetch_assoc()): ?>
-                                    <tr>
-                                        <td class="text-center"><?= $no++ ?></td>
-                                        <td><?= htmlspecialchars($row['username']) ?></td>
-                                        <td class="text-center"><?= $row['role'] ?></td>
-                                        <td class="text-center"> <a href="edit_akun.php?id=<?= $row['id_user'] ?>" class="btn edit">Edit</a>
-                                            <?php if ($row['role'] !== 'owner'): ?>
-                                                <a href="?delete=<?= $row['id_user'] ?>" class="btn delete" onclick="return confirm('Yakin hapus akun ini?')">Hapus</a>
-                                            <?php else: ?>
-                                                <span class="btn delete owner-disabled">Owner</span>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endwhile;
-                            else: ?>
-                                <tr>
-                                    <td colspan="4" class="text-center">Tidak ada data akun.</td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+        <div class="flex-1 flex flex-col">
+            <div class="flex justify-between items-center p-5 bg-white shadow-md">
+                <h2 class="text-2xl font-bold text-gray-800">Kelola Akun</h2>
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-user-circle text-xl text-gray-600"></i>
+                    <span class="text-lg font-semibold text-gray-700"><?php echo htmlspecialchars($namaAkun); ?></span>
+                    <a href="../logout.php" class="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 text-sm font-medium">Logout</a>
                 </div>
             </div>
+
+            <div class="flex-1 p-8 overflow-y-auto">
+
+                <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-3">Tambah Akun Baru</h3>
+                    <?php if ($pesan) echo $pesan; // Menampilkan pesan dari PHP ?>
+                    <form method="POST">
+                        <div class="mb-4">
+                            <label for="username_tambah" class="block text-sm font-medium text-gray-700 mb-1">Username:</label>
+                            <input type="text" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Masukan Username!" id="username_tambah" name="username" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="password_tambah" class="block text-sm font-medium text-gray-700 mb-1">Password:</label>
+                            <input type="password" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Masukan Password!" id="password_tambah" name="password" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="role_tambah">Role:</label>
+                            <select class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" id="role_tambah" name="role" required>
+                                <option value="admin">Admin</option>
+                                <option value="teknisi">Teknisi</option>
+                            </select>
+                        </div>
+                        <div class="flex space-x-3">
+                            <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" name="tambah">Buat Akun</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-3">Daftar Akun</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <?php $no = 1; ?>
+                                <?php if ($resultUsers && $resultUsers->num_rows > 0): ?>
+                                    <?php while ($row = $resultUsers->fetch_assoc()): ?>
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center"><?= $no++ ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?= htmlspecialchars($row['username']) ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center"><?= $row['role'] ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-center">
+                                                <a href="edit_akun.php?id=<?= $row['id_user'] ?>" class="text-yellow-600 hover:text-yellow-900 mx-1 px-3 py-1 rounded-md bg-yellow-100 transition duration-200 inline-flex items-center text-xs">
+                                                    <i class="fas fa-edit mr-1"></i>Edit
+                                                </a>
+                                                <?php if ($row['role'] !== 'owner'): ?>
+                                                    <a href="?delete=<?= $row['id_user'] ?>" class="text-red-600 hover:text-red-900 mx-1 px-3 py-1 rounded-md bg-red-100 transition duration-200 inline-flex items-center text-xs" onclick="return confirm('Yakin hapus akun ini?')">
+                                                        <i class="fas fa-trash-alt mr-1"></i>Hapus
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span class="text-gray-400 bg-gray-200 cursor-not-allowed mx-1 px-3 py-1 rounded-md inline-flex items-center text-xs">
+                                                        <i class="fas fa-user-shield mr-1"></i>Owner
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data akun.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>
-
 </html>
 <?php $koneksi->close(); ?>

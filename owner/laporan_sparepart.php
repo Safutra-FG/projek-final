@@ -11,33 +11,42 @@ session_start();
 
 $namaAkun = "Owner";
 
-// Inisialisasi filter
-$search_nama = isset($_GET['search_nama']) ? $_GET['search_nama'] : '';
+// --- Inisialisasi filter DULU SEKALI sebelum digunakan ---
+// Pastikan $search_nama selalu terdefinisi, bahkan jika $_GET['search_nama'] tidak ada
+$search_nama = '';
+if (isset($_GET['search_nama'])) {
+    $search_nama = $_GET['search_nama'];
+}
 
 // --- Ambil data stok barang dari database (dari tabel 'stok') ---
 $dataStokBarang = [];
 
-$where_clause_stok = "WHERE 1=1";
-if ($search_nama != '') {
-    // Gunakan prepared statements untuk keamanan
-    $search_param = "%" . $search_nama . "%";
-}
+$sqlStokBarang = "SELECT id_barang, nama_barang, stok, harga FROM stok";
+$params = [];
+$types = '';
 
-// Mengambil data dari tabel 'stok' dengan kolom yang benar
-$sqlStokBarang = "SELECT id_barang, nama_barang, stok, harga FROM stok ";
 if ($search_nama != '') {
-    $sqlStokBarang .= " WHERE nama_barang LIKE ? ";
+    $sqlStokBarang .= " WHERE nama_barang LIKE ?";
+    $params[] = "%" . $search_nama . "%";
+    $types .= "s";
 }
 $sqlStokBarang .= " ORDER BY nama_barang ASC";
 
-
 $stmt = $koneksi->prepare($sqlStokBarang);
-if ($search_nama != '') {
-    $stmt->bind_param("s", $search_param);
+
+// Periksa apakah prepare berhasil
+if ($stmt === false) {
+    die("Error dalam menyiapkan statement: " . $koneksi->error);
 }
+
+// Menggunakan splat operator (...) untuk bind_param
+// Ini adalah cara yang lebih disukai di PHP modern dan menghindari peringatan "by reference"
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params); // Ini baris yang dimodifikasi
+}
+
 $stmt->execute();
 $resultStokBarang = $stmt->get_result();
-
 
 if ($resultStokBarang && $resultStokBarang->num_rows > 0) {
     while ($row = $resultStokBarang->fetch_assoc()) {
@@ -45,6 +54,7 @@ if ($resultStokBarang && $resultStokBarang->num_rows > 0) {
     }
 }
 
+$stmt->close(); // Tutup statement setelah digunakan
 $koneksi->close();
 ?>
 <!DOCTYPE html>
@@ -89,29 +99,31 @@ $koneksi->close();
                     </li>
                     <li>
                         <a href="laporan_keuangan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                             <i class="fas fa-chart-line w-6 text-center"></i>
+                               <i class="fas fa-chart-line w-6 text-center"></i>
                             <span class="font-medium">Laporan Keuangan</span>
                         </a>
                     </li>
                     <li>
                         <a href="laporan_sparepart.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200">
-                             <i class="fas fa-boxes w-6 text-center"></i>
+                               <i class="fas fa-boxes w-6 text-center"></i>
                             <span class="font-medium">Laporan Stok Barang</span>
                         </a>
                     </li>
                     <li>
                         <a href="laporan_pesanan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                             <i class="fas fa-clipboard-list w-6 text-center"></i>
+                               <i class="fas fa-clipboard-list w-6 text-center"></i>
                             <span class="font-medium">Laporan Pesanan</span>
                         </a>
                     </li>
                 </ul>
             </div>
             <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
-                &copy; Tharz Computer 2025
-opy; Tharz Computer 2025
->>>>>>> 7b5c834 (aduhhayy)
-tify-between items-center p-5 bg-white shadow-md">
+                &copy; Thraz Computer 2025
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-col">
+            <div class="flex justify-between items-center p-5 bg-white shadow-md">
                 <h2 class="text-2xl font-bold text-gray-800">Laporan Stok Barang</h2>
                 <div class="flex items-center space-x-3">
                     <i class="fas fa-user-circle text-xl text-gray-600"></i>

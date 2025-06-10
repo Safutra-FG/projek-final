@@ -1,0 +1,14 @@
+2025-06-10 17:18:58 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
+2025-06-10 17:26:43 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
+2025-06-10 17:27:22 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
+2025-06-10 17:27:29 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
+2025-06-10 17:27:34 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
+2025-06-10 17:29:22 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
+2025-06-10 17:31:05 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
+2025-06-10 17:35:11 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
+2025-06-10 17:35:30 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
+2025-06-10 18:02:47 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
+2025-06-10 18:05:58 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
+2025-06-10 18:08:37 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
+2025-06-10 18:08:44 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
+2025-06-10 18:10:42 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22

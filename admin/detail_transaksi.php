@@ -67,9 +67,9 @@ $kerusakan = '';
 $detail_title = "Rincian Barang"; 
 
 if ($transaksi) {
-    $jenis_transaksi = $transaksi['jenis_transaksi'];
+    $jenis_transaksi = strtolower($transaksi['jenis_transaksi']); // Konversi ke lowercase
     
-    if ($jenis_transaksi == 'Penjualan') {
+    if ($jenis_transaksi == 'penjualan') {
         $detail_title = "Rincian Sparepart Dibeli";
         $sql_details = "
             SELECT 'Sparepart' as tipe, dt.jumlah, s.nama_barang as deskripsi, s.harga as harga
@@ -80,18 +80,17 @@ if ($transaksi) {
         $stmt_details = $koneksi->prepare($sql_details);
         $stmt_details->bind_param("i", $id_transaksi);
 
-    } elseif ($jenis_transaksi == 'Service' && !empty($transaksi['id_service'])) {
+    } elseif ($jenis_transaksi == 'service' && !empty($transaksi['id_service'])) {
         $detail_title = "Rincian Biaya & Sparepart Servis";
         $id_service = $transaksi['id_service'];
 
         // Ambil data dari tabel detail service (ds) sesuai gambar
-        // Menggunakan LEFT JOIN untuk menangani jika hanya ada jasa atau hanya ada barang
         $sql_details = "
             SELECT
                 ds.kerusakan,
                 s.nama_barang,
                 s.harga,
-                j.nama_jasa,
+                j.jenis_jasa,
                 j.harga AS harga_jasa
             FROM
                 detail_service ds
@@ -110,13 +109,13 @@ if ($transaksi) {
     if (isset($stmt_details)) {
         $stmt_details->execute();
         $result_details = $stmt_details->get_result();
-
+        
         // Proses hasil query yang strukturnya berbeda
-        if ($jenis_transaksi == 'Penjualan') {
+        if ($jenis_transaksi == 'penjualan') {
              while ($row = $result_details->fetch_assoc()) {
                 $details[] = $row;
             }
-        } elseif ($jenis_transaksi == 'Service') {
+        } elseif ($jenis_transaksi == 'service') {
             $is_first_row = true;
             while ($row = $result_details->fetch_assoc()) {
                 if ($is_first_row) {
@@ -124,8 +123,8 @@ if ($transaksi) {
                     $is_first_row = false;
                 }
                 // Tambahkan ke rincian jika ada jasa atau barang
-                if (!empty($row['nama_jasa'])) {
-                    $details[] = ['tipe' => 'Biaya Jasa', 'jumlah' => 1, 'deskripsi' => $row['nama_jasa'], 'harga' => $row['harga_jasa']];
+                if (!empty($row['jenis_jasa'])) {
+                    $details[] = ['tipe' => 'Biaya Jasa', 'jumlah' => 1, 'deskripsi' => $row['jenis_jasa'], 'harga' => $row['harga_jasa']];
                 }
                 if (!empty($row['nama_barang'])) {
                     $details[] = ['tipe' => 'Sparepart', 'jumlah' => 1, 'deskripsi' => $row['nama_barang'], 'harga' => $row['harga']];
@@ -135,6 +134,19 @@ if ($transaksi) {
         $stmt_details->close();
     }
 }
+
+// Ambil data pembayaran
+$pembayaran = [];
+$sql_bayar = "SELECT * FROM bayar WHERE id_transaksi = ? ORDER BY tanggal ASC";
+$stmt_bayar = $koneksi->prepare($sql_bayar);
+$stmt_bayar->bind_param("i", $id_transaksi);
+$stmt_bayar->execute();
+$result_bayar = $stmt_bayar->get_result();
+while ($row = $result_bayar->fetch_assoc()) {
+    $pembayaran[] = $row;
+}
+$stmt_bayar->close();
+
 $koneksi->close();
 ?>
 <!DOCTYPE html>
@@ -208,6 +220,7 @@ $koneksi->close();
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipe</th>
                                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
                                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Harga</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
@@ -218,18 +231,53 @@ $koneksi->close();
                                                 <td class="px-6 py-4 text-left text-sm text-gray-900"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $item['tipe'] == 'Sparepart' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'; ?>"><?php echo htmlspecialchars($item['tipe']); ?></span></td>
                                                 <td class="px-6 py-4 text-center text-sm text-gray-900"><?php echo htmlspecialchars($item['jumlah']); ?></td>
                                                 <td class="px-6 py-4 text-right text-sm text-gray-900">Rp <?php echo number_format($item['harga'], 0, ',', '.'); ?></td>
+                                                <td class="px-6 py-4 text-right text-sm text-gray-900">Rp <?php echo number_format($item['harga'] * $item['jumlah'], 0, ',', '.'); ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else : ?>
-                                        <tr><td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada rincian biaya atau sparepart untuk transaksi ini.</td></tr>
+                                        <tr><td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada rincian biaya atau sparepart untuk transaksi ini.</td></tr>
                                     <?php endif; ?>
                                 </tbody>
                                 <tfoot class="bg-gray-100">
                                     <tr>
-                                        <td colspan="3" class="px-6 py-4 text-right text-sm font-bold text-gray-800 uppercase">Total Keseluruhan</td>
+                                        <td colspan="4" class="px-6 py-4 text-right text-sm font-bold text-gray-800 uppercase">Total Keseluruhan</td>
                                         <td class="px-6 py-4 text-right text-sm font-bold text-gray-800">Rp <?php echo number_format($transaksi['total_harga'], 0, ',', '.'); ?></td>
                                     </tr>
                                 </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-md mt-8">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-700">Riwayat Pembayaran</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
+                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Metode</th>
+                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Bukti</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Catatan</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <?php if (!empty($pembayaran)) : ?>
+                                        <?php foreach ($pembayaran as $bayar) : ?>
+                                            <tr>
+                                                <td class="px-6 py-4 text-left text-sm text-gray-900"><?php echo date('d-m-Y H:i', strtotime($bayar['tanggal'])); ?></td>
+                                                <td class="px-6 py-4 text-right text-sm text-gray-900">Rp <?php echo number_format($bayar['jumlah'], 0, ',', '.'); ?></td>
+                                                <td class="px-6 py-4 text-center text-sm text-gray-900"><?php echo htmlspecialchars($bayar['metode']); ?></td>
+                                                <td class="px-6 py-4 text-center text-sm text-gray-900"><?php echo htmlspecialchars($bayar['status']); ?></td>
+                                                <td class="px-6 py-4 text-center text-sm text-gray-900"><?php if ($bayar['bukti']) { echo '<a href="../uploads/' . htmlspecialchars($bayar['bukti']) . '" target="_blank">Lihat</a>'; } else { echo '-'; } ?></td>
+                                                <td class="px-6 py-4 text-left text-sm text-gray-900"><?php echo nl2br(htmlspecialchars($bayar['catatan'])); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else : ?>
+                                        <tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada pembayaran untuk transaksi ini.</td></tr>
+                                    <?php endif; ?>
+                                </tbody>
                             </table>
                         </div>
                     </div>
