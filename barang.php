@@ -299,7 +299,6 @@ $namaAkun = "Customer";
                 </div>
             </div>
             <div class="header-right">
-                <span class="notification-icon">&#128276;</span>
                 <div class="customer-name"><?php echo htmlspecialchars($namaAkun); ?></div>
             </div>
         </div>
@@ -335,7 +334,6 @@ $namaAkun = "Customer";
                     </div>
                     <div class="product-info">
                         <div class="product-name"><?php echo htmlspecialchars($row['nama_barang']); ?></div>
-                        <div class="product-description">Deskripsi Produk</div>
                         <div class="product-price">Rp <?php echo number_format($row['harga'], 0, ',', '.'); ?>,-</div>
                         <div class="text-gray-600">Stok Tersedia: <span class="font-semibold"><?php echo $row['stok']; ?></span></div>
                     </div>
@@ -363,7 +361,18 @@ $namaAkun = "Customer";
         <button id="buy-btn" onclick="goToCheckout()">Bayar</button>
 
         <div class="flex justify-start mt-8">
-            <span style="font-size: 24px; color: #4a5568;">&#128712;</span>
+            <span style="font-size: 24px; color: #4a5568;"></span>
+        </div>
+
+        <!-- Add this where you want the info icon and popup to appear -->
+        <div class="info-icon-wrapper" style="display:inline-block; position:relative;">
+            <span class="info-icon" tabindex="0" style="background:#bde6fa; border-radius:4px; padding:4px 8px; cursor:pointer; display:inline-block;">
+                <b>i</b>
+            </span>
+            <div class="info-popup" style="display:none; position:absolute; left:110%; top:50%; transform:translateY(-50%); background:#fff; border:1px solid #bde6fa; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.08); padding:12px 18px; min-width:180px; z-index:10; color:#222;">
+                Ini adalah informasi popup seperti di VS Code.<br>
+                Anda bisa menaruh penjelasan di sini.
+            </div>
         </div>
     </div>
 
@@ -504,6 +513,16 @@ $namaAkun = "Customer";
                     noProductsMessage.style.display = 'none';
                 }
             });
+        });
+
+        // Simple JS to show/hide popup on hover or focus
+        document.querySelectorAll('.info-icon-wrapper').forEach(wrapper => {
+            const icon = wrapper.querySelector('.info-icon');
+            const popup = wrapper.querySelector('.info-popup');
+            icon.addEventListener('mouseenter', () => popup.style.display = 'block');
+            icon.addEventListener('mouseleave', () => popup.style.display = 'none');
+            icon.addEventListener('focus', () => popup.style.display = 'block');
+            icon.addEventListener('blur', () => popup.style.display = 'none');
         });
     </script>
 
