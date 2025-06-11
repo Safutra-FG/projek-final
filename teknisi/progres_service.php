@@ -1,6 +1,6 @@
 <?php
 // progres_servis.php
-include 'koneksi.php';
+include '../koneksi.php';
 
 session_start();
 // Autentikasi: hanya user dengan role teknisi yang boleh mengakses
@@ -19,7 +19,7 @@ $detailServis = null;
 if ($servisId) {
     // Gunakan prepared statement untuk keamanan
     // SESUAIKAN KOLOM DENGAN ISI DATABASE ANDA
-    $stmt = $conn->prepare("SELECT
+    $stmt = $koneksi->prepare("SELECT
                                   id_service,
                                   id_customer,
                                   tanggal,
@@ -55,14 +55,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $servisId) {
     // SESUAIKAN KOLOM DENGAN ISI DATABASE ANDA
     // Jika Anda punya kolom 'updated_at' di database, tambahkan ke query update
     // Asumsi: 'kerusakan' adalah kolom yang diupdate oleh teknisi sebagai detail perbaikan.
-    $stmt = $conn->prepare("UPDATE service SET status = ?, kerusakan = ? WHERE id_service = ?");
+    $stmt = $koneksi->prepare("UPDATE service SET status = ?, kerusakan = ? WHERE id_service = ?");
     $stmt->bind_param("ssi", $newStatus, $newKerusakan, $servisId);
 
     if ($stmt->execute()) {
         $_SESSION['message'] = "Progres servis berhasil diperbarui!";
         $_SESSION['message_type'] = "success";
         header("Location: daftar_service.php"); // Mengarahkan kembali ke daftar_service.php setelah update
-        exit();
+    
     } else {
         $_SESSION['message'] = "Gagal memperbarui progres servis: " . $stmt->error;
         $_SESSION['message_type'] = "error";
@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $servisId) {
     $stmt->close();
 }
 
-$conn->close();
+$koneksi->close();
 
 // Jika ID tidak valid atau data tidak ditemukan setelah query
 if (!$detailServis) {
