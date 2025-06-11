@@ -9,12 +9,7 @@ if (!isset($koneksi) || !$koneksi instanceof mysqli) {
     die("Koneksi database belum dibuat atau salah.");
 }
 
-// Cek jika admin sudah login (contoh sederhana)
-// if (!isset($_SESSION['admin_id'])) {
-//     header("Location: login.php");
-//     exit();
-// }
-$nama_akun_admin = "Admin Contoh"; // Placeholder, ganti dengan dari session
+$nama_akun_admin = $namaAkun; // Menggunakan variabel $namaAkun yang sudah didefinisikan di awal file
 
 // Logika filter status pesanan
 // Defaultnya, tampilkan pesanan yang paling butuh perhatian: 'Menunggu Pembayaran'
@@ -65,13 +60,13 @@ $koneksi->close();
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 
-<body class="bg-gray-100 text-gray-900 font-sans">
+<body class="bg-gray-100 text-gray-900 font-sans antialiased">
     <div class="flex min-h-screen">
-        <div class="w-64 bg-gray-800 shadow-lg flex flex-col">
+        <div class="w-64 bg-gray-800 shadow-lg flex flex-col justify-between py-6">
             <div>
-                <div class="flex flex-col items-center my-6">
+                <div class="flex flex-col items-center mb-10">
                     <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
-                    <h1 class="text-2xl font-extrabold text-white text-center">Thraz Computer</h1>
+                    <h1 class="text-2xl font-extrabold text-white text-center">Thar'z Computer</h1>
                     <p class="text-sm text-gray-400">Admin Panel</p>
                 </div>
 
@@ -120,6 +115,7 @@ $koneksi->close();
                     </li>
                 </ul>
             </div>
+
             <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
                 &copy; Thar'z Computer <?php echo date("Y"); ?>
             </div>
@@ -128,9 +124,15 @@ $koneksi->close();
         <div class="flex-1 flex flex-col">
             <div class="flex justify-between items-center p-5 bg-white shadow-md">
                 <h2 class="text-2xl font-bold text-gray-800">Kelola Pesanan Penjualan</h2>
-                <div class="flex items-center space-x-3">
-                    <span class="text-lg font-semibold text-gray-700"><?php echo htmlspecialchars($nama_akun_admin); ?></span>
-                    <a href="../logout.php" class="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 text-sm font-medium">Logout</a>
+                <div class="flex items-center space-x-5">
+                    <button class="relative text-gray-600 hover:text-blue-600 transition duration-200" title="Pemberitahuan">
+                        <span class="text-2xl">🔔</span>
+                    </button>
+                    <div class="flex items-center space-x-3">
+                        <span class="text-xl text-gray-600">👤</span>
+                        <span class="text-lg font-semibold text-gray-700"><?php echo htmlspecialchars($nama_akun_admin); ?></span>
+                        <a href="../logout.php" class="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 text-sm font-medium">Logout</a>
+                    </div>
                 </div>
             </div>
 

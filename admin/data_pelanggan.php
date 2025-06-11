@@ -4,7 +4,7 @@ include 'auth.php';
 
 $namaAkun = getNamaUser();
 
-session_start();
+
 ?>
 
 <!DOCTYPE html>

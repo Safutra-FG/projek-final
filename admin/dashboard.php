@@ -3,19 +3,6 @@
 include '../koneksi.php'; // Pastikan file koneksi.php ada dan benar
 include 'auth.php'; // Menambahkan otentikasi
 
-session_start();
-
-// Cek apakah user sudah login
-if (!isset($_SESSION['user_id'])) {
-    header("Location: ../login.php");
-    exit();
-}
-
-// Cek apakah user adalah admin
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header("Location: ../login.php");
-    exit();
-}
 
 $namaAkun = getNamaUser(); // Menggunakan fungsi dari auth.php
 

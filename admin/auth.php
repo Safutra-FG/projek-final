@@ -2,7 +2,7 @@
 session_start();
 
 // Cek apakah user sudah login
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['id_user'])) {
     header("Location: ../login.php");
     exit();
 }
@@ -15,6 +15,6 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 
 // Fungsi untuk mendapatkan nama user
 function getNamaUser() {
-    return $_SESSION['nama'] ?? "Admin";
+    return $_SESSION['username'] ?? "Admin";
 }
 ?> 

@@ -2,15 +2,6 @@
 include '../koneksi.php';
 include 'auth.php';
 
-session_start();
-
-// Cek jika admin sudah login, jika belum, redirect ke halaman login
-// if (!isset($_SESSION['admin_id']) || !isset($_SESSION['admin_nama'])) {
-// header("Location: login.php");
-// exit();
-// }
-// $id_user_admin = $_SESSION['admin_id'];
-// $nama_akun_admin = $_SESSION['admin_nama'];
 
 $namaAkun = getNamaUser();
 
@@ -107,7 +98,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['simpan_pembayaran'])) 
 
     // 1. Tentukan nilai untuk kolom baru `status` di tabel `transaksi`
     // Sesuaikan 'Lunas' dan 'Belum Lunas' dengan nilai ENUM di database Anda
-    $status_transaksi_db = ($status_pembayaran == 'lunas') ? 'lunas-siap diambil' : 'menunggu pembayaran';
+    $status_transaksi_db = ($status_pembayaran == 'Lunas') ? 'lunas' : 'menunggu pembayaran';
 
     // Validasi dasar
     if (empty($id_service_proses) || empty($id_customer_proses) || empty($tanggal_pembayaran) || $jumlah_dibayar <= 0 || empty($metode_pembayaran) || empty($status_pembayaran)) {

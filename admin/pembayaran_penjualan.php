@@ -206,13 +206,48 @@ if (isset($_GET['pesan'])) {
                     <p class="text-sm text-gray-400">Admin Panel</p>
                 </div>
                 <ul class="px-6 space-y-3">
-                    <li><a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200"><i class="bi bi-house-door-fill"></i><span class="font-medium">Dashboard</span></a></li>
-                    <li><a href="kelola_penjualan.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200"><i class="bi bi-cart-check-fill"></i><span class="font-medium">Kelola Penjualan</span></a></li>
-                    <li><a href="data_service.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200"><i class="bi bi-journal-text"></i><span class="font-medium">Data Service</span></a></li>
-                    <li><a href="riwayat_transaksi.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200"><i class="bi bi-clock-history"></i><span class="font-medium">Riwayat Transaksi</span></a></li>
-                    <li><a href="stok_gudang.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200"><i class="bi bi-box-seam-fill"></i><span class="font-medium">Stok Gudang</span></a></li>
-                    <li><a href="laporan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200"><i class="bi bi-file-earmark-text-fill"></i><span class="font-medium">Laporan</span></a></li>
-                    <li><a href="pengaturan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200"><i class="bi bi-gear-fill"></i><span class="font-medium">Pengaturan</span></a></li>
+                    <li>
+                        <a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <span class="text-xl">🏠</span>
+                            <span class="font-medium">Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="pembayaran_service.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <span class="text-xl">💰</span>
+                            <span class="font-medium">Pembayaran Service</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="kelola_penjualan.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200">
+                            <span class="text-xl">💰</span>
+                            <span class="font-medium">Kelola Penjualan</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="data_service.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <span class="text-xl">📝</span>
+                            <span class="font-medium">Data Service</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="data_pelanggan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <span class="text-xl">👥</span>
+                            <span class="font-medium">Data Pelanggan</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="riwayat_transaksi.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <span class="text-xl">💳</span>
+                            <span class="font-medium">Riwayat Transaksi</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="stok_gudang.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <span class="text-xl">📦</span>
+                            <span class="font-medium">Stok Gudang</span>
+                        </a>
+                    </li>
                 </ul>
             </div>
             <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">

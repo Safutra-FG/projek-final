@@ -1,12 +1,10 @@
 <?php
-// Konfigurasi database
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'tharz_computer');
+session_start();
+include 'koneksi.php';
+
+require_once 'pembayaran_helper.php';
 
 // Inisialisasi variabel
-$koneksi = null;
 $service_info = null;
 $service_details_list = [];
 $error_message = null;
@@ -14,14 +12,6 @@ $total_biaya_aktual_dari_detail = 0;
 $namaAkun = "Customer"; // Default account name
 
 // Fungsi untuk membuat koneksi database
-function connect_db() {
-    $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-    if ($conn->connect_error) {
-        die("Koneksi database gagal: " . $conn->connect_error);
-    }
-    return $conn;
-}
-
 // Menangani permintaan POST
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
     $id_service_input = trim($_POST['id_service']);
@@ -29,31 +19,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
     if (empty($id_service_input)) {
         $error_message = "ID Service tidak boleh kosong.";
     } else {
-        $koneksi = connect_db();
-
+        // Koneksi database sudah dibuat di koneksi.php
         $sql = "SELECT
                     s.id_service, s.tanggal, s.device, s.keluhan, s.status,
                     s.estimasi_waktu, s.estimasi_harga, s.tanggal_selesai,
-                    c.nama_customer,
-                    ds.id_ds,
-                    ds.kerusakan AS detail_kerusakan_deskripsi,
-                    ds.total AS detail_total,
-                    b.nama_barang,
-                    j.jenis_jasa
+                    c.nama_customer
                 FROM
                     service s
                 JOIN
                     customer c ON s.id_customer = c.id_customer
-                LEFT JOIN
-                    detail_service ds ON s.id_service = ds.id_service
-                LEFT JOIN
-                    stok b ON ds.id_barang = b.id_barang
-                LEFT JOIN
-                    jasa j ON ds.id_jasa = j.id_jasa
                 WHERE
-                    s.id_service = ?
-                ORDER BY
-                    ds.id_ds ASC";
+                    s.id_service = ?";
 
         $stmt = $koneksi->prepare($sql);
 
@@ -63,33 +39,99 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
             $hasil = $stmt->get_result();
 
             if ($hasil->num_rows > 0) {
+                $row = $hasil->fetch_assoc();
+                $service_info = [
+                    'id_service' => $row['id_service'],
+                    'tanggal' => $row['tanggal'],
+                    'nama_customer' => $row['nama_customer'],
+                    'device' => $row['device'],
+                    'keluhan' => $row['keluhan'],
+                    'status' => $row['status'],
+                    'estimasi_waktu' => $row['estimasi_waktu'],
+                    'estimasi_harga' => $row['estimasi_harga'],
+                    'tanggal_selesai' => $row['tanggal_selesai'],
+                ];
+
+                // Query untuk detail service
+                $sql_detail = "SELECT 
+                                ds.id_ds,
+                                ds.kerusakan AS detail_kerusakan_deskripsi,
+                                ds.total AS detail_total,
+                                b.nama_barang,
+                                j.jenis_jasa
+                            FROM 
+                                detail_service ds
+                            LEFT JOIN
+                                stok b ON ds.id_barang = b.id_barang
+                            LEFT JOIN
+                                jasa j ON ds.id_jasa = j.id_jasa
+                            WHERE 
+                                ds.id_service = ?
+                            ORDER BY 
+                                ds.id_ds ASC";
+                
+                $stmt_detail = $koneksi->prepare($sql_detail);
+                $stmt_detail->bind_param("s", $id_service_input);
+                $stmt_detail->execute();
+                $hasil_detail = $stmt_detail->get_result();
+                
+                $service_details_list = [];
+                $total_biaya_aktual_dari_detail = 0;
+                
+                while ($row_detail = $hasil_detail->fetch_assoc()) {
+                    $current_detail_total = $row_detail['detail_total'] ?: 0;
+                    $service_details_list[] = [
+                        'nama_barang' => $row_detail['nama_barang'],
+                        'jenis_jasa' => $row_detail['jenis_jasa'],
+                        'detail_kerusakan_deskripsi' => $row_detail['detail_kerusakan_deskripsi'],
+                        'detail_total' => $current_detail_total
+                    ];
+                    $total_biaya_aktual_dari_detail += $current_detail_total;
+                }
+                $stmt_detail->close();
+
+                // Query untuk transaksi
+                $sql_transaksi = "SELECT id_transaksi, status FROM transaksi WHERE id_service = ? ORDER BY id_transaksi DESC";
+                $stmt_transaksi = $koneksi->prepare($sql_transaksi);
+                $stmt_transaksi->bind_param("s", $id_service_input);
+                $stmt_transaksi->execute();
+                $hasil_transaksi = $stmt_transaksi->get_result();
+                
+                $list_id_transaksi = [];
+                $status_pembayaran = 'Belum Bayar';
                 $first_row = true;
-                while ($row = $hasil->fetch_assoc()) {
+                while ($row_transaksi = $hasil_transaksi->fetch_assoc()) {
+                    $list_id_transaksi[] = $row_transaksi['id_transaksi'];
+                    // Ambil status dari transaksi terakhir
                     if ($first_row) {
-                        $service_info = [
-                            'id_service' => $row['id_service'],
-                            'tanggal' => $row['tanggal'],
-                            'nama_customer' => $row['nama_customer'],
-                            'device' => $row['device'],
-                            'keluhan' => $row['keluhan'],
-                            'status' => $row['status'],
-                            'estimasi_waktu' => $row['estimasi_waktu'],
-                            'estimasi_harga' => $row['estimasi_harga'],
-                            'tanggal_selesai' => $row['tanggal_selesai']
-                        ];
+                        $status_pembayaran = $row_transaksi['status'];
                         $first_row = false;
                     }
-                    if ($row['id_ds'] !== null) {
-                        $current_detail_total = $row['detail_total'] ?: 0;
-                        $service_details_list[] = [
-                            'nama_barang' => $row['nama_barang'],
-                            'jenis_jasa' => $row['jenis_jasa'],
-                            'detail_kerusakan_deskripsi' => $row['detail_kerusakan_deskripsi'],
-                            'detail_total' => $current_detail_total
-                        ];
-                        $total_biaya_aktual_dari_detail += $current_detail_total;
+                }
+                $stmt_transaksi->close();
+
+                // Query pembayaran (riwayat bayar)
+                $riwayat_bayar = [];
+                $total_bayar = 0;
+                if (!empty($list_id_transaksi)) {
+                    // Ambil semua pembayaran dari semua transaksi
+                    $sql_total_bayar = "SELECT SUM(jumlah) as total FROM bayar WHERE id_transaksi IN (" . implode(',', $list_id_transaksi) . ")";
+                    $result_total = $koneksi->query($sql_total_bayar);
+                    if ($result_total && $row_total = $result_total->fetch_assoc()) {
+                        $total_bayar = $row_total['total'] ?: 0;
+                    }
+
+                    // Ambil riwayat pembayaran untuk ditampilkan
+                    foreach ($list_id_transaksi as $id_transaksi_item) {
+                        list($_, $riwayat_bayar_item) = get_total_bayar($koneksi, $id_transaksi_item);
+                        $riwayat_bayar = array_merge($riwayat_bayar, $riwayat_bayar_item);
                     }
                 }
+
+                // Simpan ke service_info
+                $service_info['status_pembayaran'] = $status_pembayaran;
+                $service_info['jumlah_bayar'] = $total_bayar;
+                $service_info['total_tagihan'] = $total_biaya_aktual_dari_detail;
             } else {
                 $error_message = "ID Service tidak ditemukan atau tidak valid.";
             }
@@ -110,269 +152,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
     <title>Thar'z Computer - Tracking Service</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            font-family: sans-serif;
-            min-height: 100vh;
-            background-color: #f8f9fa;
-        }
-        .navbar {
-            background-color: #ffffff;
-            padding: 15px 20px;
-            border-bottom: 1px solid #dee2e6;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        }
-        .navbar .logo-img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            margin-right: 10px;
-            border: 2px solid #0d6efd;
-        }
-        .navbar .nav-link {
-            padding: 10px 15px;
-            color: #495057;
-            font-weight: 500;
-            transition: background-color 0.2s, color 0.2s;
-            border-radius: 0.25rem;
-            display: flex;
-            align-items: center;
-        }
-        .navbar .nav-link.active,
-        .navbar .nav-link:hover {
-            background-color: #e9ecef;
-            color: #007bff;
-        }
-        .navbar .nav-link i {
-            margin-right: 8px;
-        }
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-        .main-header {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #dee2e6;
-            margin-bottom: 20px;
-        }
-        .card {
-            box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
-            border-radius: 0.75rem;
-            border: 1px solid rgba(0, 0, 0, 0.125);
-        }
-        .form-label {
-            font-weight: 500;
-            color: #495057;
-        }
-        .btn-submit {
-            background-color: #0d6efd; /* Adjusted to match Bootstrap primary button color */
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            font-weight: bold;
-            margin-top: 20px;
-            transition: background-color 0.2s ease;
-        }
-        .btn-submit:hover {
-            background-color: #0a58ca; /* Darker shade for hover */
-        }
-        .alert-dismissible .btn-close {
-            position: absolute;
-            right: 0;
-            padding: 0.5rem 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        /* Tracking specific styles */
-        .service-details {
-            margin-top: 30px;
-            background-color: #fff;
-            padding: 25px;
-            border-radius: 0.75rem;
-            box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
-            border: 1px solid rgba(0, 0, 0, 0.125);
-        }
-        .service-details h3 {
-            color: #007bff;
-            margin-bottom: 20px;
-            font-size: 1.5rem;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-        .detail-row {
-            display: flex;
-            margin-bottom: 10px;
-            border-bottom: 1px dashed #eee;
-            padding-bottom: 8px;
-        }
-        .detail-row:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
-        .detail-label {
-            font-weight: 600;
-            color: #343a40;
-            flex: 0 0 180px; /* Fixed width for labels */
-        }
-        .detail-value {
-            flex: 1;
-            color: #495057;
-        }
-        .status-box {
-            background-color: #e9f5ff;
-            border: 1px solid #b3d7ff;
-            border-left: 5px solid #007bff;
-            padding: 15px;
-            border-radius: 0.5rem;
-            margin-top: 25px;
-            margin-bottom: 25px;
-            text-align: center;
-        }
-        .status-title {
-            font-weight: 700;
-            font-size: 1.2rem;
-            color: #007bff;
-            margin-bottom: 8px;
-        }
-        .status-value {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #28a745; /* Green for success/ready, adjust as needed */
-            text-transform: uppercase;
-        }
-        h4 {
-            color: #007bff;
-            margin-top: 30px;
-            margin-bottom: 15px;
-            font-size: 1.2rem;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 8px;
-        }
-        .detail-item-box {
-            background-color: #f8f9fa;
-            border: 1px solid #e2e6ea;
-            padding: 15px;
-            border-radius: 0.5rem;
-            margin-bottom: 15px;
-        }
-        .item-title {
-            color: #007bff;
-            margin-bottom: 10px;
-            display: block;
-            font-size: 1.1rem;
-        }
-        .total-aktual-box {
-            background-color: #d4edda; /* Light green */
-            border: 1px solid #28a745; /* Green */
-            padding: 15px;
-            border-radius: 0.5rem;
-            margin-top: 30px;
-            font-size: 1.3rem;
-            font-weight: bold;
-            color: #155724; /* Dark green */
-            text-align: center;
-        }
-        .total-aktual-box .detail-label,
-        .total-aktual-box .detail-value {
-            font-size: 1.3rem;
-            font-weight: bold;
-        }
-        .total-aktual-box .detail-label {
-            flex: 0 0 200px;
-        }
-        .btn-bayar {
-            background-color: #ffc107; /* Warning color for payment */
-            color: #343a40;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            font-weight: bold;
-            margin-top: 20px;
-            transition: background-color 0.2s ease;
-            width: 100%;
-            max-width: 300px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .btn-bayar:hover {
-            background-color: #e0a800; /* Darker yellow for hover */
-            color: #343a40;
-        }
-        .error-message {
-            color: #dc3545;
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            padding: 15px;
-            border-radius: 0.5rem;
-            margin-top: 20px;
-            text-align: center;
-        }
-        .back-link {
-            display: inline-block;
-            margin-top: 20px;
-            color: #007bff;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .navbar .navbar-nav {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .navbar .navbar-toggler {
-                display: block;
-            }
-            .navbar .navbar-collapse {
-                display: none;
-            }
-            .navbar .navbar-collapse.show {
-                display: flex;
-                flex-direction: column;
-            }
-            .main-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-            .main-header h2 {
-                width: 100%;
-                text-align: center;
-            }
-            .detail-row {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .detail-label {
-                flex: none;
-                width: auto;
-                margin-bottom: 5px;
-            }
-            .total-aktual-box .detail-label {
-                flex: none;
-                width: auto;
-                margin-bottom: 5px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="tracking_style.css">
 </head>
 <body>
 
@@ -462,9 +242,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
                     <div class="detail-value"><?php echo nl2br(htmlspecialchars($service_info['keluhan'])); ?></div>
                 </div>
 
-                <div class="status-box">
-                    <div class="status-title">Status Service</div>
-                    <div class="status-value"><?php echo htmlspecialchars($service_info['status']); ?></div>
+                <div class="status-box" style="padding: 10px; margin-top: 15px; margin-bottom: 15px;">
+                    <div class="status-title" style="font-size: 1rem;">Status Service</div>
+                    <div class="status-value" style="font-size: 1.2rem;"><?php echo htmlspecialchars($service_info['status']); ?></div>
+                </div>
+
+                <div class="status-box" style="background-color: #fff3cd; border-color: #ffeeba; padding: 10px; margin-top: 15px; margin-bottom: 15px;">
+                    <div class="status-title" style="font-size: 1rem;">Status Pembayaran</div>
+                    <div class="status-value" style="font-size: 1.2rem; color: <?php 
+                        echo $service_info['status_pembayaran'] == 'Lunas' ? '#28a745' : 
+                            ($service_info['status_pembayaran'] == 'DP' ? '#ffc107' : '#dc3545'); 
+                    ?>">
+                        <?php echo htmlspecialchars($service_info['status_pembayaran']); ?>
+                    </div>
+                    <?php if ($service_info['status_pembayaran'] != 'Belum Bayar'): ?>
+                        <div style="margin-top: 5px; font-size: 0.9rem; color: #666;">
+                            Jumlah yang sudah dibayar: Rp <?php echo number_format($service_info['jumlah_bayar'], 0, ',', '.'); ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="detail-row">
@@ -532,9 +327,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
 
                 <?php
                 $jumlah_final_untuk_dibayar = $total_biaya_aktual_dari_detail;
-                // Tombol "Bayar Sekarang" hanya muncul jika ada total biaya aktual DAN status service relevan
+                // Tombol "Bayar Sekarang" hanya muncul jika:
+                // 1. Ada total biaya aktual
+                // 2. Status service relevan
+                // 3. Status pembayaran BUKAN Lunas
                 if ($service_info && $jumlah_final_untuk_dibayar > 0 &&
-                    ($service_info['status'] == 'selesai' || $service_info['status'] == 'diperbaiki' || $service_info['status'] == 'siap diambil')) :
+                    ($service_info['status'] == 'selesai' || $service_info['status'] == 'diperbaiki' || $service_info['status'] == 'siap diambil') &&
+                    $service_info['status_pembayaran'] != 'Lunas') :
                 ?>
                     <div class="detail-row" style="margin-top:25px;">
                         <button type="button" onclick="bayar('<?php echo htmlspecialchars($service_info['id_service']); ?>', <?php echo $jumlah_final_untuk_dibayar; ?>)" class="btn btn-bayar">Bayar Sekarang</button>

@@ -4,7 +4,7 @@ include 'auth.php';
 
 $namaAkun = getNamaUser();
 
-session_start();
+
 
 // Cek kalau form dikirim
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_stok'])) {
