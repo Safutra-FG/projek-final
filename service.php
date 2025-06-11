@@ -95,6 +95,7 @@ $namaAkun = "Customer";
     <title>Pengajuan Service - Thar'z Computer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
     <style>
         /* Anda bisa memindahkan CSS ini ke file style.css terpisah */
         body {
@@ -265,7 +266,6 @@ $namaAkun = "Customer";
             <div class="card-header bg-primary text-white"> <h5 class="my-0 font-weight-normal">Data Pelanggan & Perangkat</h5> </div>
             <div class="card-body">
                 <form method="POST" id="serviceForm">
-                    </form>
                     <div class="mb-3">
                         <label for="nama" class="form-label">Nama Lengkap <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="nama" name="nama" placeholder="Masukkan nama lengkap" required>

@@ -255,7 +255,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
                     ?>">
                         <?php echo htmlspecialchars($service_info['status_pembayaran']); ?>
                     </div>
-                    <?php if ($service_info['status_pembayaran'] != 'Belum Bayar'): ?>
+                    <?php if ($service_info['status_pembayaran'] != 'MENUNGGU PEMBAYARAN'): ?>
                         <div style="margin-top: 5px; font-size: 0.9rem; color: #666;">
                             Jumlah yang sudah dibayar: Rp <?php echo number_format($service_info['jumlah_bayar'], 0, ',', '.'); ?>
                         </div>
@@ -327,13 +327,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
 
                 <?php
                 $jumlah_final_untuk_dibayar = $total_biaya_aktual_dari_detail;
-                // Tombol "Bayar Sekarang" hanya muncul jika:
-                // 1. Ada total biaya aktual
-                // 2. Status service relevan
-                // 3. Status pembayaran BUKAN Lunas
                 if ($service_info && $jumlah_final_untuk_dibayar > 0 &&
                     ($service_info['status'] == 'selesai' || $service_info['status'] == 'diperbaiki' || $service_info['status'] == 'siap diambil') &&
-                    $service_info['status_pembayaran'] != 'Lunas') :
+                    $service_info['status_pembayaran'] != 'lunas') :
                 ?>
                     <div class="detail-row" style="margin-top:25px;">
                         <button type="button" onclick="bayar('<?php echo htmlspecialchars($service_info['id_service']); ?>', <?php echo $jumlah_final_untuk_dibayar; ?>)" class="btn btn-bayar">Bayar Sekarang</button>
