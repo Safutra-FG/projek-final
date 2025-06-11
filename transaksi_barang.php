@@ -1,7 +1,8 @@
 <?php
 session_start();
 
-// Asumsi 'koneksi.php' berisi:
+// Pastikan file koneksi.php sudah include dan berisi inisialisasi $koneksi
+// Contoh isi koneksi.php:
 // $koneksi = new mysqli("localhost", "root", "", "tharz_computer");
 // if ($koneksi->connect_error) {
 //     die("Koneksi database gagal: " . $koneksi->connect_error);
@@ -11,7 +12,7 @@ include 'koneksi.php';
 
 // --- Konfigurasi dan Inisialisasi ---
 // Definisi status transaksi yang valid (sesuaikan dengan ENUM di DB Anda)
-define('STATUS_MENUNGGU_PEMBAYARAN', 'menunggu pembayaran');
+// define('STATUS_MENUNGGU_PEMBAYARAN', 'menunggu pembayaran'); // Baris ini tidak lagi relevan jika kolom 'status' dihilangkan
 define('JENIS_TRANSAKSI_PENJUALAN', 'penjualan');
 
 $cart = $_SESSION['cart'] ?? []; 
@@ -31,163 +32,176 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nohp = trim($_POST['nohp'] ?? '');
     $email = filter_var(trim($_POST['email'] ?? ''), FILTER_VALIDATE_EMAIL); // Validasi format email
 
-    if (empty($nama) || empty($nohp) || !$email) { // Gunakan !empty untuk $nama dan $nohp, dan !filter_var untuk $email
+    if (empty($nama) || empty($nohp) || !$email) {
         $error_checkout = "Nama, No HP, dan Email wajib diisi dengan format yang benar.";
     } elseif (empty($cart)) {
         $error_checkout = "Keranjang belanja kosong. Silakan tambahkan barang terlebih dahulu.";
     } else {
         // Mulai transaksi database
-        $koneksi->begin_transaction();
-
-        try {
-            // 1. Hitung total belanja & siapkan detail item (ambil harga dan stok terbaru dari DB)
-            $items_to_process = [];
-            $total_belanja = 0;
-
-            $placeholders = implode(',', array_fill(0, count($cart), '?'));
-            $types = str_repeat('s', count($cart)); // 's' karena id_barang mungkin string/varchar di DB
-            $item_ids = array_keys($cart);
-
-            $sql_harga = "SELECT id_barang, nama_barang, harga, stok FROM stok WHERE id_barang IN ($placeholders) FOR UPDATE"; // FOR UPDATE untuk mengunci baris
-            $stmt_harga = $koneksi->prepare($sql_harga);
-            if (!$stmt_harga) {
-                throw new mysqli_sql_exception("Prepare statement harga gagal: " . $koneksi->error);
+        // Pastikan koneksi aktif sebelum memulai transaksi
+        if (!isset($koneksi) || $koneksi->connect_error) {
+            $koneksi = new mysqli("localhost", "root", "", "tharz_computer");
+            if ($koneksi->connect_error) {
+                log_error("Koneksi database gagal saat checkout: " . $koneksi->connect_error);
+                $error_checkout = "Gagal terhubung ke database. Mohon coba lagi.";
             }
+        }
 
-            $stmt_harga->bind_param($types, ...$item_ids);
-            $stmt_harga->execute();
-            $result_harga = $stmt_harga->get_result();
+        if ($koneksi && !$koneksi->connect_error) { // Lanjutkan hanya jika koneksi berhasil
+            $koneksi->begin_transaction();
 
-            // Cek jika ada item di keranjang yang tidak ditemukan di DB
-            if ($result_harga->num_rows !== count($cart)) {
-                throw new Exception("Beberapa item di keranjang tidak ditemukan di database.");
-            }
+            try {
+                // 1. Hitung total belanja & siapkan detail item (ambil harga dan stok terbaru dari DB)
+                $items_to_process = [];
+                $total_belanja = 0;
 
-            while ($barang_db = $result_harga->fetch_assoc()) {
-                $id_b = $barang_db['id_barang'];
-                $qty_pesan = $cart[$id_b];
+                $placeholders = implode(',', array_fill(0, count($cart), '?'));
+                $types = str_repeat('s', count($cart)); // 's' karena id_barang mungkin string/varchar di DB
+                $item_ids = array_keys($cart);
 
-                if ($qty_pesan <= 0) { // Pastikan kuantitas positif
-                    throw new Exception("Kuantitas untuk barang \"" . htmlspecialchars($barang_db['nama_barang']) . "\" tidak valid.");
-                }
-                if ($qty_pesan > $barang_db['stok']) {
-                    throw new Exception("Stok untuk barang \"" . htmlspecialchars($barang_db['nama_barang']) . "\" tidak mencukupi (tersisa: " . $barang_db['stok'] . ", dipesan: " . $qty_pesan . ").");
+                $sql_harga = "SELECT id_barang, nama_barang, harga, stok FROM stok WHERE id_barang IN ($placeholders) FOR UPDATE"; // FOR UPDATE untuk mengunci baris
+                $stmt_harga = $koneksi->prepare($sql_harga);
+                if (!$stmt_harga) {
+                    throw new mysqli_sql_exception("Prepare statement harga gagal: " . $koneksi->error);
                 }
 
-                $subtotal_item = $qty_pesan * $barang_db['harga'];
-                $total_belanja += $subtotal_item;
-                $items_to_process[] = [
-                    'id_barang' => $id_b,
-                    'jumlah' => $qty_pesan,
-                    'harga_satuan' => $barang_db['harga'],
-                    'subtotal' => $subtotal_item
-                ];
-            }
-            $stmt_harga->close();
-            
-            // Simpan total belanja untuk ditampilkan di halaman setelah sukses
-            $total_belanja_final = $total_belanja;
+                $stmt_harga->bind_param($types, ...$item_ids);
+                $stmt_harga->execute();
+                $result_harga = $stmt_harga->get_result();
 
-            // 2. Cek/Buat Customer
-            $id_customer = null;
-            $sql_cek_customer = "SELECT id_customer FROM customer WHERE nama_customer = ? AND no_telepon = ? AND email = ?";
-            $stmt_cek = $koneksi->prepare($sql_cek_customer);
-            if (!$stmt_cek) {
-                throw new mysqli_sql_exception("Prepare statement cek customer gagal: " . $koneksi->error);
-            }
-            $stmt_cek->bind_param("sss", $nama, $nohp, $email);
-            $stmt_cek->execute();
-            $result_cek = $stmt_cek->get_result();
-
-            if ($result_cek->num_rows > 0) {
-                $row_cust = $result_cek->fetch_assoc();
-                $id_customer = $row_cust['id_customer'];
-            } else {
-                $sql_insert_customer = "INSERT INTO customer (nama_customer, no_telepon, email) VALUES (?, ?, ?)";
-                $stmt_insert_cust = $koneksi->prepare($sql_insert_customer);
-                if (!$stmt_insert_cust) {
-                    throw new mysqli_sql_exception("Prepare statement insert customer gagal: " . $koneksi->error);
-                }
-                $stmt_insert_cust->bind_param("sss", $nama, $nohp, $email);
-                if (!$stmt_insert_cust->execute()) {
-                    throw new mysqli_sql_exception("Insert customer baru gagal: " . $stmt_insert_cust->error);
-                }
-                $id_customer = $koneksi->insert_id;
-                $stmt_insert_cust->close();
-            }
-            $stmt_cek->close();
-            
-            if (!$id_customer) {
-                throw new Exception("Gagal mendapatkan ID Customer.");
-            }
-
-            // 3. Buat Transaksi
-            $tanggal_transaksi = date('Y-m-d H:i:s');
-            $status_awal = STATUS_MENUNGGU_PEMBAYARAN; 
-            $jenis_transaksi = JENIS_TRANSAKSI_PENJUALAN; 
-
-            $sql_insert_transaksi = "INSERT INTO transaksi (id_customer, jenis, status, tanggal, total, id_service)  
-                                     VALUES (?, ?, ?, ?, ?, NULL)"; // id_service NULL untuk penjualan
-            $stmt_trans = $koneksi->prepare($sql_insert_transaksi);
-            if (!$stmt_trans) {
-                throw new mysqli_sql_exception("Prepare statement insert transaksi gagal: " . $koneksi->error);
-            }
-            $stmt_trans->bind_param("isssd", $id_customer, $jenis_transaksi, $status_awal, $tanggal_transaksi, $total_belanja);
-            if (!$stmt_trans->execute()) {
-                throw new mysqli_sql_exception("Insert transaksi gagal: " . $stmt_trans->error);
-            }
-            $id_transaksi_baru = $koneksi->insert_id;
-            $stmt_trans->close();
-
-            // 4. Buat Detail Transaksi & Kurangi Stok
-            $sql_insert_detail = "INSERT INTO detail_transaksi (id_transaksi, id_barang, jumlah, subtotal) VALUES (?, ?, ?, ?)"; 
-            $stmt_detail = $koneksi->prepare($sql_insert_detail);
-            if (!$stmt_detail) {
-                throw new mysqli_sql_exception("Prepare statement insert detail_transaksi gagal: " . $koneksi->error);
-            }
-
-            $sql_update_stok = "UPDATE stok SET stok = stok - ? WHERE id_barang = ?"; 
-            $stmt_stok = $koneksi->prepare($sql_update_stok);
-            if (!$stmt_stok) {
-                throw new mysqli_sql_exception("Prepare statement update stok gagal: " . $koneksi->error);
-            }
-
-            foreach ($items_to_process as $item) {
-                // Insert detail transaksi
-                $stmt_detail->bind_param("iiid", $id_transaksi_baru, $item['id_barang'], $item['jumlah'], $item['subtotal']);
-                if (!$stmt_detail->execute()) {
-                    throw new mysqli_sql_exception("Insert detail_transaksi untuk barang ID " . $item['id_barang'] . " gagal: " . $stmt_detail->error);
+                // Cek jika ada item di keranjang yang tidak ditemukan di DB
+                if ($result_harga->num_rows !== count($cart)) {
+                    throw new Exception("Beberapa item di keranjang tidak ditemukan di database.");
                 }
 
-                // Kurangi stok
-                $stmt_stok->bind_param("ii", $item['jumlah'], $item['id_barang']);
-                if (!$stmt_stok->execute()) {
-                    throw new mysqli_sql_exception("Update stok untuk barang ID " . $item['id_barang'] . " gagal: " . $stmt_stok->error);
+                while ($barang_db = $result_harga->fetch_assoc()) {
+                    $id_b = $barang_db['id_barang'];
+                    $qty_pesan = $cart[$id_b];
+
+                    if ($qty_pesan <= 0) { // Pastikan kuantitas positif
+                        throw new Exception("Kuantitas untuk barang \"" . htmlspecialchars($barang_db['nama_barang']) . "\" tidak valid.");
+                    }
+                    if ($qty_pesan > $barang_db['stok']) {
+                        throw new Exception("Stok untuk barang \"" . htmlspecialchars($barang_db['nama_barang']) . "\" tidak mencukupi (tersisa: " . $barang_db['stok'] . ", dipesan: " . $qty_pesan . ").");
+                    }
+
+                    $subtotal_item = $qty_pesan * $barang_db['harga'];
+                    $total_belanja += $subtotal_item;
+                    $items_to_process[] = [
+                        'id_barang' => $id_b,
+                        'jumlah' => $qty_pesan,
+                        'harga_satuan' => $barang_db['harga'],
+                        'subtotal' => $subtotal_item
+                    ];
                 }
-            }
-            $stmt_detail->close(); 
-            $stmt_stok->close(); 
+                $stmt_harga->close();
+                
+                // Simpan total belanja untuk ditampilkan di halaman setelah sukses
+                $total_belanja_final = $total_belanja;
 
-            // Jika semua berhasil, commit transaksi dan kosongkan keranjang
-            $koneksi->commit(); 
-            $_SESSION['cart'] = []; 
+                // 2. Cek/Buat Customer
+                $id_customer = null;
+                $sql_cek_customer = "SELECT id_customer FROM customer WHERE nama_customer = ? AND no_telepon = ? AND email = ?";
+                $stmt_cek = $koneksi->prepare($sql_cek_customer);
+                if (!$stmt_cek) {
+                    throw new mysqli_sql_exception("Prepare statement cek customer gagal: " . $koneksi->error);
+                }
+                $stmt_cek->bind_param("sss", $nama, $nohp, $email);
+                $stmt_cek->execute();
+                $result_cek = $stmt_cek->get_result();
 
-            // Redirect ke halaman sukses dengan membawa ID transaksi
-            header("Location: pesanan_sukses.php?id_transaksi=" . $id_transaksi_baru . "&total=" . $total_belanja_final);
-            exit; 
+                if ($result_cek->num_rows > 0) {
+                    $row_cust = $result_cek->fetch_assoc();
+                    $id_customer = $row_cust['id_customer'];
+                } else {
+                    $sql_insert_customer = "INSERT INTO customer (nama_customer, no_telepon, email) VALUES (?, ?, ?)";
+                    $stmt_insert_cust = $koneksi->prepare($sql_insert_customer);
+                    if (!$stmt_insert_cust) {
+                        throw new mysqli_sql_exception("Prepare statement insert customer gagal: " . $koneksi->error);
+                    }
+                    $stmt_insert_cust->bind_param("sss", $nama, $nohp, $email);
+                    if (!$stmt_insert_cust->execute()) {
+                        throw new mysqli_sql_exception("Insert customer baru gagal: " . $stmt_insert_cust->error);
+                    }
+                    $id_customer = $koneksi->insert_id;
+                    $stmt_insert_cust->close();
+                }
+                $stmt_cek->close();
+                
+                if (!$id_customer) {
+                    throw new Exception("Gagal mendapatkan ID Customer.");
+                }
 
-        } catch (mysqli_sql_exception $e) {
-            $koneksi->rollback(); 
-            log_error("MySQL Error during checkout: " . $e->getMessage() . " - SQLSTATE: " . $e->getSqlState());
-            $error_checkout = "Terjadi masalah database saat memproses pesanan Anda. Mohon coba lagi. (Error Code: " . $e->getCode() . ")";
-        } catch (Exception $e) { 
-            $koneksi->rollback(); 
-            log_error("Application Error during checkout: " . $e->getMessage());
-            $error_checkout = "Terjadi kesalahan saat memproses pesanan: " . $e->getMessage(); 
-        } finally {
-            // Pastikan koneksi ditutup jika tidak di handle oleh try-catch
-            if ($koneksi && !$koneksi->connect_error) { // Cek koneksi masih aktif
-                $koneksi->close(); 
+                // 3. Buat Transaksi
+                $tanggal_transaksi = date('Y-m-d H:i:s');
+                // $status_awal = STATUS_MENUNGGU_PEMBAYARAN; // Baris ini tidak lagi diperlukan
+                $jenis_transaksi = JENIS_TRANSAKSI_PENJUALAN; 
+
+                // UBAH BAGIAN INI: Hapus 'status' dari query INSERT
+                $sql_insert_transaksi = "INSERT INTO transaksi (id_customer, jenis, tanggal, total, id_service) 
+                                         VALUES (?, ?, ?, ?, NULL)"; // id_service NULL untuk penjualan
+                $stmt_trans = $koneksi->prepare($sql_insert_transaksi);
+                if (!$stmt_trans) {
+                    throw new mysqli_sql_exception("Prepare statement insert transaksi gagal: " . $koneksi->error);
+                }
+                // UBAH BAGIAN INI: Sesuaikan parameter bind_param
+                // Awalnya: bind_param("isssd", $id_customer, $jenis_transaksi, $status_awal, $tanggal_transaksi, $total_belanja);
+                // Menjadi: (int, string, string, double) -> "issd"
+                $stmt_trans->bind_param("issd", $id_customer, $jenis_transaksi, $tanggal_transaksi, $total_belanja);
+                if (!$stmt_trans->execute()) {
+                    throw new mysqli_sql_exception("Insert transaksi gagal: " . $stmt_trans->error);
+                }
+                $id_transaksi_baru = $koneksi->insert_id;
+                $stmt_trans->close();
+
+                // 4. Buat Detail Transaksi & Kurangi Stok
+                $sql_insert_detail = "INSERT INTO detail_transaksi (id_transaksi, id_barang, jumlah, subtotal) VALUES (?, ?, ?, ?)"; 
+                $stmt_detail = $koneksi->prepare($sql_insert_detail);
+                if (!$stmt_detail) {
+                    throw new mysqli_sql_exception("Prepare statement insert detail_transaksi gagal: " . $koneksi->error);
+                }
+
+                $sql_update_stok = "UPDATE stok SET stok = stok - ? WHERE id_barang = ?"; 
+                $stmt_stok = $koneksi->prepare($sql_update_stok);
+                if (!$stmt_stok) {
+                    throw new mysqli_sql_exception("Prepare statement update stok gagal: " . $koneksi->error);
+                }
+
+                foreach ($items_to_process as $item) {
+                    // Insert detail transaksi
+                    $stmt_detail->bind_param("iiid", $id_transaksi_baru, $item['id_barang'], $item['jumlah'], $item['subtotal']);
+                    if (!$stmt_detail->execute()) {
+                        throw new mysqli_sql_exception("Insert detail_transaksi untuk barang ID " . $item['id_barang'] . " gagal: " . $stmt_detail->error);
+                    }
+
+                    // Kurangi stok
+                    $stmt_stok->bind_param("ii", $item['jumlah'], $item['id_barang']);
+                    if (!$stmt_stok->execute()) {
+                        throw new mysqli_sql_exception("Update stok untuk barang ID " . $item['id_barang'] . " gagal: " . $stmt_stok->error);
+                    }
+                }
+                $stmt_detail->close(); 
+                $stmt_stok->close(); 
+
+                // Jika semua berhasil, commit transaksi dan kosongkan keranjang
+                $koneksi->commit(); 
+                $_SESSION['cart'] = []; 
+
+                // Redirect ke halaman sukses dengan membawa ID transaksi
+                header("Location: pesanan_sukses.php?id_transaksi=" . $id_transaksi_baru . "&total=" . $total_belanja_final);
+                exit; 
+
+            } catch (mysqli_sql_exception $e) {
+                $koneksi->rollback(); 
+                log_error("MySQL Error during checkout: " . $e->getMessage() . " - SQLSTATE: " . $e->getSqlState());
+                $error_checkout = "Terjadi masalah database saat memproses pesanan Anda. Mohon coba lagi. (Error Code: " . $e->getCode() . ")";
+            } catch (Exception $e) { 
+                $koneksi->rollback(); 
+                log_error("Application Error during checkout: " . $e->getMessage());
+                $error_checkout = "Terjadi kesalahan saat memproses pesanan: " . $e->getMessage(); 
+            } finally {
+                // Tidak menutup koneksi di sini agar bisa digunakan lagi di bagian bawah script jika perlu.
+                // Koneksi akan ditutup di akhir script.
             }
         }
     }
@@ -202,16 +216,17 @@ if (!empty($cart)) {
     $types = str_repeat('s', count($cart));
     $item_ids = array_keys($cart);
 
-    // Buat koneksi baru untuk tampilan jika belum ada atau sudah ditutup dari proses POST sebelumnya
-    if (!$koneksi || $koneksi->connect_error) {
+    // **Perbaikan di sini:** Buat koneksi baru untuk tampilan jika belum ada atau sudah ditutup
+    if (!isset($koneksi) || $koneksi->connect_error) { // Cek jika $koneksi belum diset atau ada error koneksi
         $koneksi = new mysqli("localhost", "root", "", "tharz_computer");
         if ($koneksi->connect_error) {
             log_error("Koneksi database gagal untuk tampilan keranjang: " . $koneksi->connect_error);
-            // Handle error for display, maybe show an empty cart or a message
+            // Anda bisa menampilkan pesan error yang ramah pengguna di sini
+            $error_checkout = "Terjadi kesalahan saat memuat detail keranjang. Mohon coba lagi.";
         }
     }
 
-    if ($koneksi && !$koneksi->connect_error) {
+    if ($koneksi && !$koneksi->connect_error) { // Lanjutkan hanya jika koneksi berhasil
         $stmt_display = $koneksi->prepare("SELECT id_barang, nama_barang, harga FROM stok WHERE id_barang IN ($placeholders)");
         if ($stmt_display) {
             $stmt_display->bind_param($types, ...$item_ids);
@@ -234,8 +249,12 @@ if (!empty($cart)) {
             log_error("Gagal menyiapkan query untuk tampilan keranjang: " . $koneksi->error);
             $error_checkout = "Terjadi kesalahan saat memuat detail keranjang.";
         }
-        $koneksi->close(); // Tutup koneksi setelah ambil data untuk tampilan
     }
+}
+
+// **Penting:** Tutup koneksi di akhir script setelah semua operasi database selesai.
+if (isset($koneksi) && !$koneksi->connect_error) {
+    $koneksi->close(); 
 }
 ?>
 
@@ -262,11 +281,11 @@ if (!empty($cart)) {
             </div>
         <?php endif; ?>
 
-        <?php if (empty($cart_display_items)): ?>
+        <?php if (empty($cart_display_items) && empty($error_checkout)): // Tampilkan ini hanya jika keranjang kosong dan tidak ada error umum ?>
             <div class="alert alert-warning text-center">
                 <i class="fas fa-shopping-cart"></i> Keranjang belanja Anda kosong. <a href="index.php" class="alert-link">Mulai belanja sekarang!</a>
             </div>
-        <?php else: ?>
+        <?php elseif (!empty($cart_display_items)): ?>
             <form method="post" action="">
                 <div class="card mb-4 shadow-sm">
                     <div class="card-header bg-primary text-white">

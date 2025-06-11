@@ -304,10 +304,11 @@ if (isset($_GET['id_service']) && isset($_GET['amount'])) {
                             <li><i class="bi bi-wallet-fill text-info"></i> Jumlah Transfer: Rp <?php echo number_format($amount_to_pay, 0, ',', '.'); ?></li>
                         </ul>
                         <hr>
-                        <p class="mb-1">Konfirmasi dapat dikirimkan melalui salah satu kontak berikut:</p>
+                        <p class="mb-1">Perhatikan ini tatacara konfirmasi pembayarannya</p>
                         <ul class="list-unstyled">
-                            <li><i class="bi bi-whatsapp text-success"></i> WhatsApp: **+62 812-3456-7890**</li>
-                            <li><i class="bi bi-envelope-at-fill text-danger"></i> Email: **info@tharzcomputer.com**</li>
+                            <li><i class="mb-1">1. pilih metode pembayaran (jika cash, dapat menekan "konfirmasi pembayaran" dan datang ke toko)</i>
+                            <li><i class="mb-1">2. Transfer dan screenshoot bukti pembayarannya</i></li>
+                            <li><i class="mb-1">3. kirimkan bukti pembayaran melalui whatsapp dengan menekan tombol "Konfirmasi Pembayaran"</i></li>
                         </ul>
                     </div>
                     <p class="mt-3 fst-italic text-center text-muted">Service Anda akan kami proses/siapkan untuk pengambilan setelah pembayaran Anda berhasil diverifikasi oleh tim kami.</p>
@@ -315,7 +316,7 @@ if (isset($_GET['id_service']) && isset($_GET['amount'])) {
             </div>
 
             <div class="text-center mt-4 py-4 border-top">
-                <a href="tracking.php?id_service=<?php echo htmlspecialchars($id_service_input); ?>" class="btn btn-primary btn-lg"><i class="bi bi-eye"></i> Lihat Status Service Saya</a>
+                <a href="https://wa.link/k70iaj" target="_blank" class="btn btn-primary btn-lg"><i class="bi bi-whatsapp"></i> Konfirmasi Pembayaran</a>
                 <a href="index.php" class="btn btn-outline-secondary btn-lg ms-2"><i class="bi bi-house"></i> Kembali ke Beranda</a>
             </div>
 

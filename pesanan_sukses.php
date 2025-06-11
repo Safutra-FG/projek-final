@@ -147,8 +147,14 @@ if (isset($_GET['id_transaksi'])) {
                     </div>
                 </div>
 
-                <div class="text-center mt-4">
-                    <a href="index.php" class="btn btn-primary"><i class="bi bi-arrow-left-circle"></i> Kembali ke Beranda</a>
+                <div class="text-center mt-4 py-4 border-top">
+                    <a href="https://wa.link/k70iaj" target="_blank" class="btn btn-primary btn-lg">
+                        <i class="bi bi-whatsapp"></i> Konfirmasi Pembayaran
+                    </a>
+
+                    <a href="index.php" class="btn btn-outline-secondary btn-lg ms-2">
+                        <i class="bi bi-house"></i> Kembali ke Beranda
+                    </a>
                 </div>
             </div> </div> <?php else: ?>
         <div class="alert alert-warning text-center" role="alert">Tidak ada informasi pesanan untuk ditampilkan. Mungkin sesi Anda berakhir atau ada kesalahan.</div>

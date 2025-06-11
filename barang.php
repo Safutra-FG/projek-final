@@ -1,31 +1,25 @@
 <?php
-session_start(); // Pastikan sesi dimulai untuk keranjang
-
-// Pastikan file koneksi.php ada dan berisi objek $koneksi
-include 'koneksi.php'; 
+session_start();
+// Path ke koneksi.php sudah benar karena keduanya ada di root
+require 'koneksi.php';
 
 // Periksa koneksi database
 if ($koneksi->connect_error) {
     die("Koneksi database gagal: " . $koneksi->connect_error);
 }
 
-// Ambil semua data produk dari database
-// Pastikan Anda mengambil kolom 'gambar' juga dari tabel 'stok'
+// Ambil semua data produk dari database, termasuk kolom 'gambar'
 $sql = "SELECT id_barang, nama_barang, harga, stok, gambar FROM stok";
 $result = $koneksi->query($sql);
 
-// Pastikan direktori gambar produk ada
-$productImageDir = 'icons/products/'; // Sesuaikan dengan lokasi folder gambar Anda
-if (!is_dir($productImageDir)) {
-    // Jika direktori tidak ada, buatlah (opsional, untuk development)
-    // mkdir($productImageDir, 0777, true); // Uncomment ini jika perlu membuat folder otomatis
-}
+// --- PERBAIKAN FINAL PATH GAMBAR ---
+// Karena barang.php dan folder uploads ada di level yang sama, pathnya menjadi sederhana.
+$uploadDir = 'uploads/';
 
 // Dummy data untuk nama customer di header
-$namaAkun = "Customer"; 
+$namaAkun = "Customer";
 
 ?>
-
 <!DOCTYPE html>
 <html lang="id">
 
@@ -35,10 +29,10 @@ $namaAkun = "Customer";
     <title>Thar'z Computer - Beli Barang</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* CSS tidak diubah */
         body {
             font-family: 'Segoe UI', sans-serif;
             color: #333;
-            /* Background gradient yang lebih menarik */
             background: linear-gradient(135deg, #a7e0f8 0%, #d8e5f2 50%, #f0f4f7 100%);
             min-height: 100vh;
             display: flex;
@@ -46,7 +40,6 @@ $namaAkun = "Customer";
             align-items: center;
             padding: 20px;
         }
-
         .container-wrapper {
             max-width: 960px;
             width: 100%;
@@ -55,34 +48,28 @@ $namaAkun = "Customer";
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
             padding: 30px;
         }
-
         .header-section {
-            display: flex; /* Kembali ke flex untuk baris atas */
+            display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px; /* Kurangi margin bawah karena tombol di luar */
+            margin-bottom: 20px;
             padding-bottom: 15px;
             border-bottom: 1px solid #e0e0e0;
         }
-
-        /* Hapus .header-top-row dan .header-left-top karena tidak lagi diperlukan dengan struktur baru */
         .header-left, .header-right {
             display: flex;
             align-items: center;
         }
-
         .header-logo {
             font-size: 1.8rem;
             font-weight: bold;
             color: #1a73e8;
-            margin-right: 20px; /* Jarak antara logo dan search box */
+            margin-right: 20px;
         }
-
         .search-box {
             position: relative;
             width: 250px;
         }
-
         .search-box input {
             width: 100%;
             padding: 10px 15px 10px 40px;
@@ -92,12 +79,10 @@ $namaAkun = "Customer";
             outline: none;
             transition: all 0.2s ease-in-out;
         }
-
         .search-box input:focus {
             border-color: #4299e1;
             box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
         }
-
         .search-box .search-icon {
             position: absolute;
             left: 15px;
@@ -105,118 +90,101 @@ $namaAkun = "Customer";
             transform: translateY(-50%);
             color: #a0aec0;
         }
-
         .notification-icon {
             font-size: 1.5rem;
             color: #4a5568;
             cursor: pointer;
             transition: color 0.2s ease-in-out;
-            margin-right: 15px; /* Tambahkan jarak ke kanan */
+            margin-right: 15px;
         }
-
         .notification-icon:hover {
             color: #1a73e8;
         }
-
         .customer-name {
             font-weight: 600;
             color: #2d3748;
         }
-
-        /* Styling untuk tombol kembali ke dashboard */
         .back-to-dashboard-btn-wrapper {
-            text-align: left; /* Sesuaikan posisi tombol */
-            margin-bottom: 20px; /* Jarak dari daftar produk */
-            margin-top: -10px; /* Tarik sedikit ke atas agar lebih dekat dengan garis */
+            text-align: left;
+            margin-bottom: 20px;
+            margin-top: -10px;
         }
-
         .back-to-dashboard-btn {
-            background-color: #6c757d; /* Abu-abu netral */
+            background-color: #6c757d;
             color: white;
             padding: 8px 15px;
             border-radius: 8px;
             text-decoration: none;
             font-weight: 600;
             transition: background-color 0.2s ease-in-out;
-            display: inline-flex; /* Agar bisa berada di baris sendiri tapi konten di dalamnya sejajar */
+            display: inline-flex;
             align-items: center;
             gap: 5px;
         }
-
         .back-to-dashboard-btn:hover {
             background-color: #5a6268;
         }
-
         .product-list {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Responsif */
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
         }
-
         .product-item {
             background: #fdfdfd;
             padding: 20px;
             border-radius: 12px;
             display: flex;
-            flex-direction: column; /* Mengubah arah flex menjadi kolom */
-            align-items: center; /* Pusatkan item secara horizontal */
+            flex-direction: column;
+            align-items: center;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             border: 1px solid #e0e0e0;
-            text-align: center; /* Pusatkan teks */
+            text-align: center;
         }
-
         .product-item:hover {
             transform: translateY(-5px);
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
         }
-
         .product-image-container {
-            width: 150px; /* Atur lebar container gambar */
-            height: 150px; /* Atur tinggi container gambar */
+            width: 150px;
+            height: 150px;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden; /* Pastikan gambar tidak melebihi batas */
+            overflow: hidden;
             margin-bottom: 15px;
             background-color: #f7fafc;
         }
-
         .product-image {
             max-width: 100%;
             max-height: 100%;
-            object-fit: contain; /* Memastikan gambar pas di dalam container */
-            display: block; /* Menghilangkan spasi ekstra di bawah gambar */
+            object-fit: contain;
+            display: block;
         }
-
         .product-info {
-            flex-grow: 1; /* Memberi ruang yang tersisa */
-            width: 100%; /* Agar info mengisi lebar penuh */
-            margin-bottom: 15px; /* Jarak antara info dan kontrol kuantitas */
+            flex-grow: 1;
+            width: 100%;
+            margin-bottom: 15px;
         }
-
         .product-name {
             font-weight: 700;
             color: #1a73e8;
             margin-bottom: 8px;
             font-size: 1.25rem;
         }
-
         .product-description {
             font-size: 0.9rem;
             color: #6b7280;
             margin-bottom: 10px;
         }
-
         .product-price {
             color: #e65100;
             font-size: 1.5rem;
             font-weight: bold;
             margin-bottom: 8px;
         }
-
         .quantity-control {
             display: flex;
             align-items: center;
@@ -224,10 +192,9 @@ $namaAkun = "Customer";
             border-radius: 8px;
             overflow: hidden;
             border: 1px solid #cbd5e0;
-            width: fit-content; /* Sesuaikan lebar kontrol kuantitas dengan isinya */
-            margin: 0 auto; /* Pusatkan kontrol kuantitas */
+            width: fit-content;
+            margin: 0 auto;
         }
-
         .quantity-btn {
             width: 36px;
             height: 36px;
@@ -242,11 +209,9 @@ $namaAkun = "Customer";
             transition: background-color 0.2s ease-in-out;
             font-size: 1.2rem;
         }
-
         .quantity-btn:hover {
             background-color: #3182ce;
         }
-
         .quantity-input {
             width: 50px;
             height: 36px;
@@ -264,7 +229,6 @@ $namaAkun = "Customer";
             -webkit-appearance: none;
             margin: 0;
         }
-
         #cart-box {
             background: #fdfdfd;
             padding: 20px;
@@ -276,15 +240,12 @@ $namaAkun = "Customer";
             font-size: 0.95rem;
             color: #4a5568;
         }
-
         #cart-box p {
             margin-bottom: 8px;
         }
-
         #cart-box strong {
             color: #1d5fab;
         }
-
         #buy-btn {
             margin-top: 30px;
             padding: 14px 30px;
@@ -301,20 +262,17 @@ $namaAkun = "Customer";
             margin-left: auto;
             margin-right: auto;
         }
-
         #buy-btn:hover {
             background-color: #218838;
         }
-
         .text-gray-600 {
             color: #6b7280;
             font-size: 0.875rem;
         }
-
         .total-price-display {
-            font-size: 2.2rem; /* Ukuran lebih besar */
+            font-size: 2.2rem;
             font-weight: bold;
-            color: #2c5282; /* Warna biru gelap */
+            color: #2c5282;
             text-align: right;
             margin-top: 20px;
             padding-top: 15px;
@@ -324,14 +282,12 @@ $namaAkun = "Customer";
             align-items: baseline;
             gap: 10px;
         }
-
         .total-price-display span {
-            font-size: 1.8rem; /* Sedikit lebih kecil untuk "Rp" */
+            font-size: 1.8rem;
             color: #4a5568;
         }
     </style>
 </head>
-
 <body class="bg-gradient-to-br from-blue-100 to-indigo-50">
     <div class="container-wrapper">
         <div class="header-section">
@@ -343,13 +299,11 @@ $namaAkun = "Customer";
                 </div>
             </div>
             <div class="header-right">
-                <span class="notification-icon">&#128276;</span>
                 <div class="customer-name"><?php echo htmlspecialchars($namaAkun); ?></div>
             </div>
         </div>
         <div class="back-to-dashboard-btn-wrapper">
-            <a href="index.php" class="back-to-dashboard-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <a href="index.php" class="back-to-dashboard-btn"> <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0L5 11.414a1 1 0 010-1.414l3.293-3.293a1 1 0 011.414 1.414L7.414 10H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
                 </svg>
                 Dashboard
@@ -360,22 +314,26 @@ $namaAkun = "Customer";
         <div class="product-list" id="product-list-container">
             <?php
             if ($result->num_rows > 0) {
-                while ($row = $result->fetch_assoc()): ?>
+                while ($row = $result->fetch_assoc()):
+                    
+                    $imageFilename = $row['gambar'] ?? null;
+                    $htmlImagePath = $uploadDir . $imageFilename; // Path untuk HTML src
+            ?>
                 <div class="product-item" data-product-name="<?php echo htmlspecialchars(strtolower($row['nama_barang'])); ?>">
                     <div class="product-image-container">
                         <?php
-                        $imagePath = $productImageDir . htmlspecialchars($row['gambar']);
-                        // Pastikan gambar ada dan terbaca, jika tidak tampilkan placeholder
-                        if (!empty($row['gambar']) && file_exists($imagePath)) {
-                            echo '<img src="' . htmlspecialchars($imagePath) . '" alt="' . htmlspecialchars($row['nama_barang']) . '" class="product-image">';
+                        // Cek jika nama file ada DAN file tersebut benar-benar ada di server
+                        if ($imageFilename && file_exists($htmlImagePath)) {
+                            // Tampilkan gambar menggunakan path yang sudah benar
+                            echo '<img src="' . htmlspecialchars($htmlImagePath) . '" alt="' . htmlspecialchars($row['nama_barang']) . '" class="product-image">';
                         } else {
-                            echo '<span style="color: #a0aec0;">No Image</span>'; // Atau gunakan gambar placeholder default
+                            // Tampilkan placeholder jika tidak ada gambar
+                            echo '<span style="color: #a0aec0;">Gambar tidak tersedia</span>'; 
                         }
                         ?>
                     </div>
                     <div class="product-info">
                         <div class="product-name"><?php echo htmlspecialchars($row['nama_barang']); ?></div>
-                        <div class="product-description">Deskripsi Produk</div>
                         <div class="product-price">Rp <?php echo number_format($row['harga'], 0, ',', '.'); ?>,-</div>
                         <div class="text-gray-600">Stok Tersedia: <span class="font-semibold"><?php echo $row['stok']; ?></span></div>
                     </div>
@@ -403,7 +361,18 @@ $namaAkun = "Customer";
         <button id="buy-btn" onclick="goToCheckout()">Bayar</button>
 
         <div class="flex justify-start mt-8">
-            <span style="font-size: 24px; color: #4a5568;">&#128712;</span>
+            <span style="font-size: 24px; color: #4a5568;"></span>
+        </div>
+
+        <!-- Add this where you want the info icon and popup to appear -->
+        <div class="info-icon-wrapper" style="display:inline-block; position:relative;">
+            <span class="info-icon" tabindex="0" style="background:#bde6fa; border-radius:4px; padding:4px 8px; cursor:pointer; display:inline-block;">
+                <b>i</b>
+            </span>
+            <div class="info-popup" style="display:none; position:absolute; left:110%; top:50%; transform:translateY(-50%); background:#fff; border:1px solid #bde6fa; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.08); padding:12px 18px; min-width:180px; z-index:10; color:#222;">
+                Ini adalah informasi popup seperti di VS Code.<br>
+                Anda bisa menaruh penjelasan di sini.
+            </div>
         </div>
     </div>
 
@@ -416,10 +385,9 @@ $namaAkun = "Customer";
             if (newQty < 0) newQty = 0;
             if (newQty > stok) {
                 newQty = stok;
-                alert('Stok tidak mencukupi!'); // Notifikasi jika melebihi stok
+                alert('Stok tidak mencukupi!');
             }
-
-            // Hanya update jika kuantitas berubah
+            
             if (newQty === currentQty) {
                 return;
             }
@@ -431,15 +399,15 @@ $namaAkun = "Customer";
             data.append('id', id_barang);
             data.append('quantity', newQty);
 
-            // Kirim request ke 'checkout.php' untuk update sesi keranjang
-            fetch('checkout.php', { // Pastikan ini mengarah ke file yang menangani sesi keranjang
+            // Ganti ke file logika keranjang Anda yang benar, kemungkinan besar 'checkout.php'
+            fetch('checkout.php', {
                 method: 'POST',
                 body: data,
             })
             .then(response => response.text())
             .then(html => {
                 document.getElementById('cart-box').innerHTML = html;
-                loadTotalPrice(); // Perbarui total harga setelah update keranjang
+                loadTotalPrice();
             })
             .catch(() => {
                 alert('Gagal update keranjang');
@@ -447,13 +415,13 @@ $namaAkun = "Customer";
         }
 
         function loadCart() {
-            // Muat tampilan keranjang dari 'checkout.php'
-            fetch('checkout.php?action=view') // Pastikan ini mengarah ke file yang menangani sesi keranjang
+            // Ganti ke file logika keranjang Anda yang benar
+            fetch('checkout.php?action=view')
                 .then(response => response.text())
                 .then(html => {
                     document.getElementById('cart-box').innerHTML = html;
                     syncQuantities();
-                    loadTotalPrice(); // Muat total harga saat keranjang dimuat
+                    loadTotalPrice();
                 })
                 .catch(() => {
                     document.getElementById('cart-box').innerHTML = '<i>Gagal memuat keranjang</i>';
@@ -462,9 +430,8 @@ $namaAkun = "Customer";
 
         function syncQuantities() {
             const inputs = document.querySelectorAll('.quantity-input');
-
-            // Ambil data keranjang dalam format JSON dari 'checkout.php'
-            fetch('checkout.php?action=get_cart_json') // Pastikan ini mengarah ke file yang menangani sesi keranjang
+            // Ganti ke file logika keranjang Anda yang benar
+            fetch('checkout.php?action=get_cart_json')
                 .then(res => res.json())
                 .then(cart => {
                     inputs.forEach(input => {
@@ -474,10 +441,9 @@ $namaAkun = "Customer";
                 });
         }
 
-        // Fungsi baru untuk memuat dan menampilkan total harga
         function loadTotalPrice() {
-            // Ambil total harga dari 'checkout.php'
-            fetch('checkout.php?action=get_total_price') // Pastikan ini mengarah ke file yang menangani sesi keranjang
+            // Ganti ke file logika keranjang Anda yang benar
+            fetch('checkout.php?action=get_total_price')
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('total-price').innerText = formatRupiah(data.total);
@@ -486,8 +452,7 @@ $namaAkun = "Customer";
                     document.getElementById('total-price').innerText = '0,-';
                 });
         }
-
-        // Fungsi untuk format rupiah
+        
         function formatRupiah(angka) {
             let reverse = angka.toString().split('').reverse().join('');
             let ribuan = reverse.match(/\d{1,3}/g);
@@ -496,14 +461,13 @@ $namaAkun = "Customer";
         }
 
         function goToCheckout() {
-            // Pastikan ada item di keranjang sebelum melanjutkan ke transaksi
-            fetch('checkout.php?action=get_cart_json') // Pastikan ini mengarah ke file yang menangani sesi keranjang
+            // Ganti ke file logika keranjang Anda yang benar
+            fetch('checkout.php?action=get_cart_json')
                 .then(res => res.json())
                 .then(cart => {
                     const hasItems = Object.keys(cart).some(id => cart[id] > 0);
                     if (hasItems) {
-                        // Arahkan ke halaman transaksi_barang.php untuk final checkout
-                        window.location.href = 'transaksi_barang.php'; 
+                        window.location.href = 'transaksi_barang.php';
                     } else {
                         alert('Keranjang belanja masih kosong!');
                     }
@@ -512,17 +476,15 @@ $namaAkun = "Customer";
                     alert('Terjadi kesalahan saat memeriksa keranjang.');
                 });
         }
-
-        // --- Logika Live Search ---
+        
         document.addEventListener('DOMContentLoaded', () => {
-            loadCart(); // Muat keranjang saat halaman dimuat
+            loadCart();
 
             const searchInput = document.getElementById('search-input');
             const productItems = document.querySelectorAll('.product-item');
             const noFilteredProductsMessage = document.getElementById('no-filtered-products-message');
-            const noProductsMessage = document.getElementById('no-products-message'); // Pesan jika tidak ada produk sama sekali dari DB
-
-            // Sembunyikan pesan "Tidak ada produk ditemukan" jika ada produk dari awal
+            const noProductsMessage = document.getElementById('no-products-message');
+            
             if (noProductsMessage && productItems.length > 0) {
                 noProductsMessage.style.display = 'none';
             }
@@ -532,30 +494,37 @@ $namaAkun = "Customer";
                 let foundProducts = 0;
 
                 productItems.forEach(item => {
-                    const productName = item.dataset.productName; // Ambil nama produk dari data-attribute
+                    const productName = item.dataset.productName;
                     if (productName.includes(searchTerm)) {
-                        item.style.display = 'flex'; // Tampilkan elemen
+                        item.style.display = 'flex';
                         foundProducts++;
                     } else {
-                        item.style.display = 'none'; // Sembunyikan elemen
+                        item.style.display = 'none';
                     }
                 });
-
-                // Tampilkan atau sembunyikan pesan "Tidak ada produk yang cocok"
-                if (foundProducts === 0 && productItems.length > 0) { // Hanya tampilkan jika ada produk yang difilter dan tidak ada yang cocok
+                
+                if (foundProducts === 0 && productItems.length > 0) { 
                     noFilteredProductsMessage.style.display = 'block';
                 } else {
                     noFilteredProductsMessage.style.display = 'none';
                 }
 
-                // Pastikan pesan "Tidak ada produk ditemukan" (dari PHP) juga disembunyikan jika pencarian aktif
                 if (noProductsMessage) {
                     noProductsMessage.style.display = 'none';
                 }
             });
         });
+
+        // Simple JS to show/hide popup on hover or focus
+        document.querySelectorAll('.info-icon-wrapper').forEach(wrapper => {
+            const icon = wrapper.querySelector('.info-icon');
+            const popup = wrapper.querySelector('.info-popup');
+            icon.addEventListener('mouseenter', () => popup.style.display = 'block');
+            icon.addEventListener('mouseleave', () => popup.style.display = 'none');
+            icon.addEventListener('focus', () => popup.style.display = 'block');
+            icon.addEventListener('blur', () => popup.style.display = 'none');
+        });
     </script>
 
 </body>
-
 </html>

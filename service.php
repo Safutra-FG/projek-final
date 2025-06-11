@@ -262,9 +262,10 @@ $namaAkun = "Customer";
         <?php endif; ?>
 
         <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white"> <h5 class="my-0 font-weight-normal">Data Pelanggan & Perangkat</h5> </div>
             <div class="card-body">
-                <h5 class="card-title mb-4 pb-2 border-bottom">Data Pelanggan & Perangkat</h5>
                 <form method="POST" id="serviceForm">
+                    </form>
                     <div class="mb-3">
                         <label for="nama" class="form-label">Nama Lengkap <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="nama" name="nama" placeholder="Masukkan nama lengkap" required>
