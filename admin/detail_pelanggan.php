@@ -56,7 +56,7 @@ if ($stmt_service) {
 
 // Ambil riwayat pembelian
 // Menggunakan nama kolom yang ada di database Anda: 'tanggal' untuk transaksi, dan meng-aliasnya
-$sql_beli = "SELECT td.id_transaksi, td.jumlah, td.subtotal, t.tanggal AS tanggal_transaksi, sb.nama_barang
+$sql_beli = "SELECT td.id_transaksi, td.jumlah, td.subtotal, t.tanggal AS tanggal_transaksi, sb.nama_barang, t.status
              FROM detail_transaksi td
              JOIN transaksi t ON td.id_transaksi = t.id_transaksi
              JOIN stok sb ON td.id_barang = sb.id_barang
@@ -111,6 +111,18 @@ $koneksi->close();
                         <a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
                             <span class="text-xl">🏠</span>
                             <span class="font-medium">Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="pembayaran_service.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <span class="text-xl">💰</span>
+                            <span class="font-medium">Pembayaran Service</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="kelola_penjualan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300  hover:bg-gray-700 hover:text-white transition duration-200">
+                            <span class="text-xl">💰</span>
+                            <span class="font-medium">Kelola Penjualan</span>
                         </a>
                     </li>
                     <li>
@@ -194,7 +206,9 @@ $koneksi->close();
                                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
                                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Kerusakan</th>
                                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Masuk</th>
+                                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Selesai</th>
+                                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Detail</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200 text-center">
@@ -233,6 +247,7 @@ $koneksi->close();
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $statusClass; ?>"><?php echo ucfirst(htmlspecialchars($row['status'])); ?></span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['tanggal']); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['tanggal_selesai'] ?: '-'); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                 <a href="edit_service.php?id=<?php echo htmlspecialchars($row['id_service']); ?>" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-3 rounded-md shadow-sm transition duration-200 text-xs">Detail</a>
                                             </td>
@@ -257,6 +272,7 @@ $koneksi->close();
                                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Barang</th>
                                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
                                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
+                                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200 text-center">
@@ -266,6 +282,26 @@ $koneksi->close();
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['nama_barang']); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['jumlah']); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Rp<?php echo number_format($row['subtotal'], 0, ',', '.'); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <?php
+                                                $statusClass = '';
+                                                switch ($row['status']) {
+                                                    case 'pending':
+                                                        $statusClass = 'bg-yellow-100 text-yellow-800';
+                                                        break;
+                                                    case 'selesai':
+                                                        $statusClass = 'bg-green-100 text-green-800';
+                                                        break;
+                                                    case 'dibatalkan':
+                                                        $statusClass = 'bg-red-100 text-red-800';
+                                                        break;
+                                                    default:
+                                                        $statusClass = 'bg-gray-100 text-gray-800';
+                                                        break;
+                                                }
+                                                ?>
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $statusClass; ?>"><?php echo ucfirst(htmlspecialchars($row['status'])); ?></span>
+                                            </td>
                                         </tr>
                                     <?php endwhile; ?>
                                 </tbody>

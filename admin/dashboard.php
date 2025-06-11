@@ -212,7 +212,7 @@ $koneksi->close(); // Tutup koneksi database
             <div class="flex-1 p-8 overflow-y-auto">
                 <h1 class="text-3xl font-extrabold mb-8 text-center text-gray-800">Selamat Datang Admin, Pantau Seluruh Operasi!</h1>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-10">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10">
                     <div class="card bg-blue-100 text-blue-800">
                         <h3>Total Servis Hari Ini</h3>
                         <p class="text-blue-700"><?php echo $totalServisHariIni; ?></p>
@@ -229,10 +229,14 @@ $koneksi->close(); // Tutup koneksi database
                         <h3>Servis Selesai Hari Ini</h3>
                         <p class="text-green-700"><?php echo $servisSelesaiHariIni; ?></p>
                     </div>
-                    <div class="card bg-indigo-100 text-indigo-800">
-                        <h3>Estimasi Pendapatan Hari Ini</h3>
-                        <p class="text-indigo-700">Rp <?php echo number_format($totalEstimasiPendapatanHariIni, 0, ',', '.'); ?></p>
-                    </div>
+                </div>
+
+                <!-- Shortcut Tambah Service -->
+                <div class="flex justify-center mb-10">
+                    <a href="tambah_service.php" class="inline-flex items-center px-8 py-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-200 text-lg">
+                        <span class="text-2xl mr-3">➕</span>
+                        Tambah Service Baru
+                    </a>
                 </div>
 
                 <div class="bg-white p-6 rounded-lg shadow-md mt-8">

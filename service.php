@@ -8,15 +8,18 @@ $alert_type = ''; // 'success' atau 'danger'
 
 if (isset($_POST['submit'])) {
     // Ambil data dari form
-    $nama = $_POST['nama'] ?? '';
-    $no_hp = $_POST['nomor_telepon'] ?? '';
-    $email = $_POST['email'] ?? '';
-    $device = $_POST['device'] ?? '';
-    $keluhan = $_POST['keluhan'] ?? '';
+    $nama = trim($_POST['nama'] ?? '');
+    $no_hp = trim($_POST['nomor_telepon'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $device = trim($_POST['device'] ?? '');
+    $keluhan = trim($_POST['keluhan'] ?? '');
 
     // Validasi input di sisi server (penting!)
     if (empty($nama) || empty($no_hp) || empty($email) || empty($device) || empty($keluhan)) {
         $alert_message = "Semua kolom wajib diisi!";
+        $alert_type = 'danger';
+    } elseif (!preg_match("/^[a-zA-Z\s]{3,50}$/", $nama)) {
+        $alert_message = "Nama hanya boleh mengandung huruf dan spasi (3-50 karakter).";
         $alert_type = 'danger';
     } elseif (!preg_match("/^\d{10,12}$/", $no_hp)) {
         $alert_message = "Nomor handphone harus 10-12 digit angka.";
@@ -26,27 +29,39 @@ if (isset($_POST['submit'])) {
         $alert_type = 'danger';
     } else {
         // Mulai transaksi
-        mysqli_autocommit($koneksi, FALSE); // Matikan autocommit
+        mysqli_autocommit($koneksi, FALSE);
         $success = TRUE;
 
-        // 1. Masukkan data ke tabel customer
-        // Gunakan Prepared Statement untuk mencegah SQL Injection
-        $stmtCustomer = mysqli_prepare($koneksi, "INSERT INTO customer (nama_customer, no_telepon, email) VALUES (?, ?, ?)");
-        if ($stmtCustomer) {
-            mysqli_stmt_bind_param($stmtCustomer, "sss", $nama, $no_hp, $email);
-            if (!mysqli_stmt_execute($stmtCustomer)) {
-                $alert_message = "Gagal input customer: " . mysqli_stmt_error($stmtCustomer);
+        // Cek apakah customer sudah ada
+        $stmtCheck = mysqli_prepare($koneksi, "SELECT id_customer FROM customer WHERE email = ? AND no_telepon = ? AND nama_customer = ?");
+        mysqli_stmt_bind_param($stmtCheck, "sss", $email, $no_hp, $nama);
+        mysqli_stmt_execute($stmtCheck);
+        mysqli_stmt_store_result($stmtCheck);
+        
+        if (mysqli_stmt_num_rows($stmtCheck) > 0) {
+            // Customer sudah ada, ambil ID-nya
+            mysqli_stmt_bind_result($stmtCheck, $id_customer);
+            mysqli_stmt_fetch($stmtCheck);
+        } else {
+            // Customer belum ada, insert baru
+            $stmtCustomer = mysqli_prepare($koneksi, "INSERT INTO customer (nama_customer, no_telepon, email) VALUES (?, ?, ?)");
+            if ($stmtCustomer) {
+                mysqli_stmt_bind_param($stmtCustomer, "sss", $nama, $no_hp, $email);
+                if (!mysqli_stmt_execute($stmtCustomer)) {
+                    $alert_message = "Gagal input customer: " . mysqli_stmt_error($stmtCustomer);
+                    $alert_type = 'danger';
+                    $success = FALSE;
+                } else {
+                    $id_customer = mysqli_insert_id($koneksi);
+                }
+                mysqli_stmt_close($stmtCustomer);
+            } else {
+                $alert_message = "Gagal menyiapkan statement customer: " . mysqli_error($koneksi);
                 $alert_type = 'danger';
                 $success = FALSE;
-            } else {
-                $id_customer = mysqli_insert_id($koneksi);
             }
-            mysqli_stmt_close($stmtCustomer);
-        } else {
-            $alert_message = "Gagal menyiapkan statement customer: " . mysqli_error($koneksi);
-            $alert_type = 'danger';
-            $success = FALSE;
         }
+        mysqli_stmt_close($stmtCheck);
 
         // 2. Jika input customer berhasil, lanjutkan ke tabel service
         if ($success) {

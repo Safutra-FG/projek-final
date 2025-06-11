@@ -24,7 +24,8 @@ $sql_transaksi = "
         c.no_telepon,
         t.tanggal AS tanggal_transaksi,
         t.jenis AS jenis_transaksi,
-        t.total AS total_harga
+        t.total AS total_harga,
+        t.status AS status_transaksi
     FROM
         transaksi t
     JOIN
@@ -135,9 +136,25 @@ if ($transaksi) {
     }
 }
 
+// GROUPING DATA $details
+if (!empty($details)) {
+    $grouped = [];
+    foreach ($details as $item) {
+        $key = $item['deskripsi'] . '|' . $item['tipe'] . '|' . $item['harga'];
+        if (!isset($grouped[$key])) {
+            $grouped[$key] = $item;
+        } else {
+            $grouped[$key]['jumlah'] += $item['jumlah'];
+        }
+    }
+    $details = array_values($grouped);
+}
+
 // Ambil data pembayaran
 $pembayaran = [];
-$sql_bayar = "SELECT * FROM bayar WHERE id_transaksi = ? ORDER BY tanggal ASC";
+$sql_bayar = "SELECT b.*, t.status as status_transaksi FROM bayar b 
+              JOIN transaksi t ON b.id_transaksi = t.id_transaksi 
+              WHERE b.id_transaksi = ? ORDER BY b.tanggal ASC";
 $stmt_bayar = $koneksi->prepare($sql_bayar);
 $stmt_bayar->bind_param("i", $id_transaksi);
 $stmt_bayar->execute();
@@ -198,6 +215,14 @@ $koneksi->close();
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div><strong class="text-gray-600">ID Pesanan:</strong> <?php echo htmlspecialchars($transaksi['id_transaksi']); ?></div>
                             <div><strong class="text-gray-600">Jenis Transaksi:</strong> <span class="font-bold <?php echo $transaksi['jenis_transaksi'] == 'Service' ? 'text-blue-600' : 'text-green-600'; ?>"><?php echo htmlspecialchars($transaksi['jenis_transaksi']); ?></span></div>
+                            <div><strong class="text-gray-600">Status:</strong> 
+                                <span class="font-bold <?php 
+                                    echo $transaksi['status_transaksi'] == 'Selesai' ? 'text-green-600' : 
+                                        ($transaksi['status_transaksi'] == 'Proses' ? 'text-yellow-600' : 'text-red-600'); 
+                                ?>">
+                                    <?php echo htmlspecialchars($transaksi['status_transaksi']); ?>
+                                </span>
+                            </div>
                             <div><strong class="text-gray-600">Nama Pelanggan:</strong> <?php echo htmlspecialchars($transaksi['nama_customer']); ?></div>
                             <div><strong class="text-gray-600">No. HP:</strong> <?php echo htmlspecialchars($transaksi['no_telepon']); ?></div>
                             <div><strong class="text-gray-600">Tanggal:</strong> <?php echo date('d F Y', strtotime($transaksi['tanggal_transaksi'])); ?></div>
@@ -257,7 +282,8 @@ $koneksi->close();
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
                                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
                                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Metode</th>
-                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status Pembayaran</th>
+                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status Transaksi</th>
                                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Bukti</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Catatan</th>
                                     </tr>
@@ -269,13 +295,26 @@ $koneksi->close();
                                                 <td class="px-6 py-4 text-left text-sm text-gray-900"><?php echo date('d-m-Y H:i', strtotime($bayar['tanggal'])); ?></td>
                                                 <td class="px-6 py-4 text-right text-sm text-gray-900">Rp <?php echo number_format($bayar['jumlah'], 0, ',', '.'); ?></td>
                                                 <td class="px-6 py-4 text-center text-sm text-gray-900"><?php echo htmlspecialchars($bayar['metode']); ?></td>
-                                                <td class="px-6 py-4 text-center text-sm text-gray-900"><?php echo htmlspecialchars($bayar['status']); ?></td>
-                                                <td class="px-6 py-4 text-center text-sm text-gray-900"><?php if ($bayar['bukti']) { echo '<a href="../uploads/' . htmlspecialchars($bayar['bukti']) . '" target="_blank">Lihat</a>'; } else { echo '-'; } ?></td>
+                                                <td class="px-6 py-4 text-center text-sm text-gray-900">
+                                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                                        <?php echo $bayar['status'] == 'Lunas' ? 'bg-green-100 text-green-800' : 
+                                                            ($bayar['status'] == 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'); ?>">
+                                                        <?php echo htmlspecialchars($bayar['status']); ?>
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-4 text-center text-sm text-gray-900">
+                                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                                        <?php echo $bayar['status_transaksi'] == 'Selesai' ? 'bg-green-100 text-green-800' : 
+                                                            ($bayar['status_transaksi'] == 'Proses' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'); ?>">
+                                                        <?php echo htmlspecialchars($bayar['status_transaksi']); ?>
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-4 text-center text-sm text-gray-900"><?php if ($bayar['bukti']) { echo '<a href="../' . htmlspecialchars($bayar['bukti']) . '" target="_blank" class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition duration-200"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>Lihat Bukti</a>'; } else { echo '-'; } ?></td>
                                                 <td class="px-6 py-4 text-left text-sm text-gray-900"><?php echo nl2br(htmlspecialchars($bayar['catatan'])); ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else : ?>
-                                        <tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada pembayaran untuk transaksi ini.</td></tr>
+                                        <tr><td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada pembayaran untuk transaksi ini.</td></tr>
                                     <?php endif; ?>
                                 </tbody>
                             </table>

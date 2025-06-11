@@ -25,154 +25,6 @@ $pembayaran_history = [];
 $total_sudah_dibayar = 0;
 
 
-// Proses update data service utama dan penambahan detail service
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // 1. Validasi CSRF Token
-    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        $error_messages[] = "Kesalahan validasi CSRF token. Silakan coba lagi.";
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        $csrf_token = $_SESSION['csrf_token'];
-    } else {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-
-        $id_service_post = intval($_POST['id_service']);
-
-        mysqli_begin_transaction($koneksi);
-
-        try {
-            // Update data service utama
-            $id_customer = mysqli_real_escape_string($koneksi, $_POST['id_customer']);
-            $status_baru = mysqli_real_escape_string($koneksi, $_POST['status']);
-            $estimasi_waktu = mysqli_real_escape_string($koneksi, $_POST['estimasi_waktu']);
-            $estimasi_harga_input = trim($_POST['estimasi_harga']);
-            $estimasi_harga = !empty($estimasi_harga_input) ? (float)$estimasi_harga_input : null;
-
-            // Ambil status lama dan tanggal selesai saat ini
-            $query_cek_status_lama = "SELECT status, tanggal_selesai FROM service WHERE id_service = ?";
-            $stmt_cek_status = $koneksi->prepare($query_cek_status_lama);
-            $stmt_cek_status->bind_param("i", $id_service_post);
-            $stmt_cek_status->execute();
-            $hasil_cek = $stmt_cek_status->get_result();
-            $data_lama = $hasil_cek->fetch_assoc();
-            $stmt_cek_status->close();
-
-            $status_lama = null;
-            $tanggal_selesai_saat_ini = null;
-            if ($data_lama) {
-                $status_lama = $data_lama['status'];
-                $tanggal_selesai_saat_ini = $data_lama['tanggal_selesai'];
-            }
-
-            $set_parts = [];
-            $bind_types_update = "";
-            $bind_params_update = [];
-
-            // Kolom yang diupdate
-            $set_parts[] = "id_customer = ?";
-            $bind_types_update .= "s";
-            $bind_params_update[] = $id_customer;
-
-            $set_parts[] = "status = ?";
-            $bind_types_update .= "s";
-            $bind_params_update[] = $status_baru;
-
-            $set_parts[] = "estimasi_waktu = ?";
-            $bind_types_update .= "s";
-            $bind_params_update[] = $estimasi_waktu;
-
-            $set_parts[] = "estimasi_harga = ?";
-            $bind_types_update .= "d";
-            $bind_params_update[] = $estimasi_harga;
-
-            // Logika untuk tanggal_selesai
-            $status_selesai = ['selesai', 'siap diambil'];
-            if (!in_array($status_lama, $status_selesai) && in_array($status_baru, $status_selesai)) {
-                $set_parts[] = "tanggal_selesai = CURDATE()";
-            } elseif (in_array($status_lama, $status_selesai) && !in_array($status_baru, $status_selesai)) {
-                $set_parts[] = "tanggal_selesai = NULL";
-            }
-
-            if (!empty($set_parts)) {
-                $query_update_service = "UPDATE service SET " . implode(", ", $set_parts) . " WHERE id_service = ?";
-                $stmt_update_service = $koneksi->prepare($query_update_service);
-
-                if ($stmt_update_service) {
-                    $bind_types_update .= "i";
-                    $bind_params_update[] = $id_service_post;
-                    $stmt_update_service->bind_param($bind_types_update, ...$bind_params_update);
-                    if (!$stmt_update_service->execute()) {
-                        $error_messages[] = "Error updating data service utama: " . $stmt_update_service->error;
-                    }
-                    $stmt_update_service->close();
-                } else {
-                    $error_messages[] = "Error preparing statement untuk service utama: " . $koneksi->error;
-                }
-            }
-
-            // Proses penambahan detail service baru
-            if (empty($error_messages) && (!empty(trim($_POST['kerusakan_detail'])) || !empty($_POST['id_barang']) || !empty($_POST['id_jasa']))) {
-                $id_barang_val = !empty($_POST['id_barang']) ? intval($_POST['id_barang']) : null;
-                $id_jasa_val = !empty($_POST['id_jasa']) ? intval($_POST['id_jasa']) : null;
-                $kerusakan_detail_val = mysqli_real_escape_string($koneksi, $_POST['kerusakan_detail']);
-
-                $server_calculated_total_detail = 0;
-                if ($id_barang_val) {
-                    $stmt_harga_brg = $koneksi->prepare("SELECT harga FROM stok WHERE id_barang = ?");
-                    $stmt_harga_brg->bind_param("i", $id_barang_val);
-                    $stmt_harga_brg->execute();
-                    $res_brg = $stmt_harga_brg->get_result();
-                    if ($row_brg = $res_brg->fetch_assoc()) {
-                        $server_calculated_total_detail += (float)$row_brg['harga'];
-                    }
-                    $stmt_harga_brg->close();
-                }
-                if ($id_jasa_val) {
-                    $stmt_harga_jsa = $koneksi->prepare("SELECT harga FROM jasa WHERE id_jasa = ?");
-                    $stmt_harga_jsa->bind_param("i", $id_jasa_val);
-                    $stmt_harga_jsa->execute();
-                    $res_jsa = $stmt_harga_jsa->get_result();
-                    if ($row_jsa = $res_jsa->fetch_assoc()) {
-                        $server_calculated_total_detail += (float)$row_jsa['harga'];
-                    }
-                    $stmt_harga_jsa->close();
-                }
-
-                if ($id_barang_val !== null || $id_jasa_val !== null || !empty(trim($kerusakan_detail_val))) {
-                    $stmt_add_detail = $koneksi->prepare("INSERT INTO detail_service (id_service, id_barang, id_jasa, kerusakan, total) VALUES (?, ?, ?, ?, ?)");
-                    if ($stmt_add_detail) {
-                        $stmt_add_detail->bind_param("iiisd", $id_service_post, $id_barang_val, $id_jasa_val, $kerusakan_detail_val, $server_calculated_total_detail);
-                        if (!$stmt_add_detail->execute()) {
-                            $error_messages[] = "Error menambahkan detail service: " . $stmt_add_detail->error;
-                        }
-                        $stmt_add_detail->close();
-                    } else {
-                        $error_messages[] = "Error preparing statement untuk detail service: " . $koneksi->error;
-                    }
-                }
-            }
-
-            if (empty($error_messages)) {
-                mysqli_commit($koneksi);
-                $success_message = "Data service berhasil diupdate";
-                if (isset($stmt_add_detail) && $stmt_add_detail) {
-                    $success_message .= " dan detail baru berhasil ditambahkan!";
-                }
-
-                echo "<script>
-                        alert('" . addslashes($success_message) . "');
-                        window.location.href='edit_service.php?id=$id_service_post';
-                      </script>";
-                exit;
-            } else {
-                mysqli_rollback($koneksi);
-            }
-        } catch (Exception $e) {
-            mysqli_rollback($koneksi);
-            $error_messages[] = "Terjadi pengecualian: " . $e->getMessage();
-        }
-    }
-}
-
 // Ambil data service yang akan diedit
 $query_service = "SELECT s.*, c.nama_customer, c.no_telepon, c.email 
                 FROM service s 
@@ -256,7 +108,7 @@ if ($pembayaran_history) { // Ubah status hanya jika transaksi sudah ada
 }
 
 // Ambil data untuk dropdown
-$barangs_result = mysqli_query($koneksi, "SELECT id_barang, nama_barang, harga FROM stok ORDER BY nama_barang");
+$barangs_result = mysqli_query($koneksi, "SELECT id_barang, nama_barang, harga FROM stok WHERE stok > 0 ORDER BY nama_barang");
 $jasas_result = mysqli_query($koneksi, "SELECT id_jasa, jenis_jasa, harga FROM jasa ORDER BY jenis_jasa");
 
 function getStatusBadge($status)
@@ -264,6 +116,7 @@ function getStatusBadge($status)
     switch (strtolower($status)) {
         case 'selesai':
         case 'siap diambil':
+        case 'sudah diambil':
             return 'bg-green-100 text-green-800';
         case 'dibatalkan':
             return 'bg-red-100 text-red-800';
@@ -272,6 +125,185 @@ function getStatusBadge($status)
             return 'bg-blue-100 text-blue-800';
         default:
             return 'bg-yellow-100 text-yellow-800';
+    }
+}
+
+// Proses update data service utama dan penambahan detail service
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Cek apakah service sudah diambil
+    if ($service['status'] == 'sudah diambil') {
+        $error_messages[] = "Service ini sudah diambil oleh pelanggan dan tidak dapat diubah lagi.";
+    } else {
+        // 1. Validasi CSRF Token
+        if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+            $error_messages[] = "Kesalahan validasi CSRF token. Silakan coba lagi.";
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+            $csrf_token = $_SESSION['csrf_token'];
+        } else {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+
+            $id_service_post = intval($_POST['id_service']);
+
+            mysqli_begin_transaction($koneksi);
+
+            try {
+                // Update data service utama
+                $id_customer = mysqli_real_escape_string($koneksi, $_POST['id_customer']);
+                $status_baru = mysqli_real_escape_string($koneksi, $_POST['status']);
+                $estimasi_waktu = mysqli_real_escape_string($koneksi, $_POST['estimasi_waktu']);
+                $estimasi_harga_input = trim($_POST['estimasi_harga']);
+                $estimasi_harga = !empty($estimasi_harga_input) ? (float)$estimasi_harga_input : null;
+
+                // Ambil status lama dan tanggal selesai saat ini
+                $query_cek_status_lama = "SELECT status, tanggal_selesai FROM service WHERE id_service = ?";
+                $stmt_cek_status = $koneksi->prepare($query_cek_status_lama);
+                $stmt_cek_status->bind_param("i", $id_service_post);
+                $stmt_cek_status->execute();
+                $hasil_cek = $stmt_cek_status->get_result();
+                $data_lama = $hasil_cek->fetch_assoc();
+                $stmt_cek_status->close();
+
+                $status_lama = null;
+                $tanggal_selesai_saat_ini = null;
+                if ($data_lama) {
+                    $status_lama = $data_lama['status'];
+                    $tanggal_selesai_saat_ini = $data_lama['tanggal_selesai'];
+                }
+
+                $set_parts = [];
+                $bind_types_update = "";
+                $bind_params_update = [];
+
+                // Kolom yang diupdate
+                $set_parts[] = "id_customer = ?";
+                $bind_types_update .= "s";
+                $bind_params_update[] = $id_customer;
+
+                $set_parts[] = "status = ?";
+                $bind_types_update .= "s";
+                $bind_params_update[] = $status_baru;
+
+                $set_parts[] = "estimasi_waktu = ?";
+                $bind_types_update .= "s";
+                $bind_params_update[] = $estimasi_waktu;
+
+                $set_parts[] = "estimasi_harga = ?";
+                $bind_types_update .= "d";
+                $bind_params_update[] = $estimasi_harga;
+
+                // Logika untuk tanggal_selesai
+                $status_selesai = ['selesai', 'siap diambil'];
+                if (!in_array($status_lama, $status_selesai) && in_array($status_baru, $status_selesai)) {
+                    $set_parts[] = "tanggal_selesai = CURDATE()";
+                } elseif (in_array($status_lama, $status_selesai) && !in_array($status_baru, $status_selesai)) {
+                    $set_parts[] = "tanggal_selesai = NULL";
+                }
+
+                if (!empty($set_parts)) {
+                    $query_update_service = "UPDATE service SET " . implode(", ", $set_parts) . " WHERE id_service = ?";
+                    $stmt_update_service = $koneksi->prepare($query_update_service);
+
+                    if ($stmt_update_service) {
+                        $bind_types_update .= "i";
+                        $bind_params_update[] = $id_service_post;
+                        $stmt_update_service->bind_param($bind_types_update, ...$bind_params_update);
+                        if (!$stmt_update_service->execute()) {
+                            $error_messages[] = "Error updating data service utama: " . $stmt_update_service->error;
+                        }
+                        $stmt_update_service->close();
+                    } else {
+                        $error_messages[] = "Error preparing statement untuk service utama: " . $koneksi->error;
+                    }
+                }
+
+                // Proses penambahan detail service baru
+                if (empty($error_messages) && (!empty(trim($_POST['kerusakan_detail'])) || !empty($_POST['id_barang']) || !empty($_POST['id_jasa']))) {
+                    $id_barang_val = !empty($_POST['id_barang']) ? intval($_POST['id_barang']) : null;
+                    $id_jasa_val = !empty($_POST['id_jasa']) ? intval($_POST['id_jasa']) : null;
+                    $kerusakan_detail_val = mysqli_real_escape_string($koneksi, $_POST['kerusakan_detail']);
+
+                    $server_calculated_total_detail = 0;
+                    if ($id_barang_val) {
+                        $stmt_harga_brg = $koneksi->prepare("SELECT harga FROM stok WHERE id_barang = ?");
+                        $stmt_harga_brg->bind_param("i", $id_barang_val);
+                        $stmt_harga_brg->execute();
+                        $res_brg = $stmt_harga_brg->get_result();
+                        if ($row_brg = $res_brg->fetch_assoc()) {
+                            $server_calculated_total_detail += (float)$row_brg['harga'];
+                        }
+                        $stmt_harga_brg->close();
+                    }
+                    if ($id_jasa_val) {
+                        $stmt_harga_jsa = $koneksi->prepare("SELECT harga FROM jasa WHERE id_jasa = ?");
+                        $stmt_harga_jsa->bind_param("i", $id_jasa_val);
+                        $stmt_harga_jsa->execute();
+                        $res_jsa = $stmt_harga_jsa->get_result();
+                        if ($row_jsa = $res_jsa->fetch_assoc()) {
+                            $server_calculated_total_detail += (float)$row_jsa['harga'];
+                        }
+                        $stmt_harga_jsa->close();
+                    }
+
+                    if ($id_barang_val !== null || $id_jasa_val !== null || !empty(trim($kerusakan_detail_val))) {
+                        // Cek stok barang jika ada barang yang dipilih
+                        if ($id_barang_val !== null) {
+                            $stmt_cek_stok = $koneksi->prepare("SELECT stok FROM stok WHERE id_barang = ? FOR UPDATE");
+                            $stmt_cek_stok->bind_param("i", $id_barang_val);
+                            $stmt_cek_stok->execute();
+                            $result_stok = $stmt_cek_stok->get_result();
+                            $data_stok = $result_stok->fetch_assoc();
+                            
+                            if ($data_stok['stok'] <= 0) {
+                                $error_messages[] = "Stok barang tidak mencukupi.";
+                                $stmt_cek_stok->close();
+                                return;
+                            }
+                            
+                            // Kurangi stok
+                            $stmt_update_stok = $koneksi->prepare("UPDATE stok SET stok = stok - 1 WHERE id_barang = ?");
+                            $stmt_update_stok->bind_param("i", $id_barang_val);
+                            if (!$stmt_update_stok->execute()) {
+                                $error_messages[] = "Gagal mengupdate stok barang: " . $stmt_update_stok->error;
+                                $stmt_update_stok->close();
+                                return;
+                            }
+                            $stmt_update_stok->close();
+                            $stmt_cek_stok->close();
+                        }
+
+                        $stmt_add_detail = $koneksi->prepare("INSERT INTO detail_service (id_service, id_barang, id_jasa, kerusakan, total) VALUES (?, ?, ?, ?, ?)");
+                        if ($stmt_add_detail) {
+                            $stmt_add_detail->bind_param("iiisd", $id_service_post, $id_barang_val, $id_jasa_val, $kerusakan_detail_val, $server_calculated_total_detail);
+                            if (!$stmt_add_detail->execute()) {
+                                $error_messages[] = "Error menambahkan detail service: " . $stmt_add_detail->error;
+                            }
+                            $stmt_add_detail->close();
+                        } else {
+                            $error_messages[] = "Error preparing statement untuk detail service: " . $koneksi->error;
+                        }
+                    }
+                }
+
+                if (empty($error_messages)) {
+                    mysqli_commit($koneksi);
+                    $success_message = "Data service berhasil diupdate";
+                    if (isset($stmt_add_detail) && $stmt_add_detail) {
+                        $success_message .= " dan detail baru berhasil ditambahkan!";
+                    }
+
+                    echo "<script>
+                            alert('" . addslashes($success_message) . "');
+                            window.location.href='edit_service.php?id=$id_service_post';
+                          </script>";
+                    exit;
+                } else {
+                    mysqli_rollback($koneksi);
+                }
+            } catch (Exception $e) {
+                mysqli_rollback($koneksi);
+                $error_messages[] = "Terjadi pengecualian: " . $e->getMessage();
+            }
+        }
     }
 }
 ?>
@@ -547,6 +579,26 @@ function getStatusBadge($status)
 
                             <div class="bg-white p-6 rounded-lg shadow-md mb-6 top-6">
                                 <h3 class="text-xl font-semibold text-gray-800 border-b pb-4 mb-6">Form Check</h3>
+                                <?php if ($service['status'] == 'sudah diambil' || $service['status'] == 'dibatalkan'): ?>
+                                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                                        <div class="flex">
+                                            <div class="flex-shrink-0">
+                                                <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                                </svg>
+                                            </div>
+                                            <div class="ml-3">
+                                                <p class="text-sm text-yellow-700">
+                                                    <?php if ($service['status'] == 'sudah diambil'): ?>
+                                                        Service ini sudah diambil oleh pelanggan. Form edit tidak dapat diakses.
+                                                    <?php else: ?>
+                                                        Service ini telah dibatalkan. Form edit tidak dapat diakses.
+                                                    <?php endif; ?>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php else: ?>
                                 <div class="space-y-4">
                                     <div>
                                         <label for="status" class="block mb-1 text-sm font-medium text-gray-700">Status Service</label>
@@ -557,9 +609,21 @@ function getStatusBadge($status)
                                             <option value="diperbaiki" <?php echo ($service['status'] == 'diperbaiki') ? 'selected' : ''; ?>>Diperbaiki</option>
                                             <option value="selesai" <?php echo ($service['status'] == 'selesai') ? 'selected' : ''; ?>>Selesai</option>
                                             <option value="siap diambil" <?php echo ($service['status'] == 'siap diambil') ? 'selected' : ''; ?>>Siap Diambil</option>
-                                            <option value="dibatalkan" <?php echo ($service['status'] == 'dibatalkan') ? 'selected' : ''; ?>>Dibatalkan</option>
                                         </select>
                                     </div>
+                                    <?php if ($service['status'] == 'selesai' || $service['status'] == 'siap diambil'): ?>
+                                    <div class="pt-4">
+                                        <a href="konfirmasi_pengambilan.php?id=<?php echo htmlspecialchars($id_service); ?>" 
+                                           onclick="return confirm('Apakah Anda yakin ingin mengkonfirmasi bahwa service ini sudah diambil oleh pelanggan?');"
+                                           class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                            Konfirmasi Pengambilan Service
+                                        </a>
+                                    </div>
+                                    <?php endif; ?>
+                                    
                                     <div>
                                         <label for="estimasi_waktu" class="block mb-1 text-sm font-medium text-gray-700">Estimasi Waktu</label>
                                         <input type="text" id="estimasi_waktu" name="estimasi_waktu" class="block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500"
@@ -608,16 +672,22 @@ function getStatusBadge($status)
                                         </button>
                                     </div>
                                 </div>
+                                <?php endif; ?>
                             </div>
 
                             <div class="bg-red-50 border-2 border-dashed border-red-300 p-6 rounded-lg shadow-sm">
                                 <h4 class="text-lg font-bold text-red-800">Aksi Berbahaya</h4>
-                                <p class="text-sm text-red-700 mt-1 mb-4">Aksi ini akan menghapus semua data service termasuk rincian dan riwayat pembayarannya. Aksi ini tidak dapat diurungkan.</p>
-                                <a href="hapus_service.php?id=<?php echo htmlspecialchars($id_service); ?>"
-                                    onclick="return confirm('Anda yakin ingin menghapus service ini secara permanen? Semua data terkait (rincian, pembayaran, transaksi) juga akan dihapus.');"
+                                <p class="text-sm text-red-700 mt-1 mb-4">Aksi ini akan membatalkan service ini. Service yang dibatalkan tidak dapat diedit kembali.</p>
+                                <?php if ($service['status'] != 'sudah diambil'): ?>
+                                <a href="batalkan_service.php?id=<?php echo htmlspecialchars($id_service); ?>"
+                                    onclick="return confirm('Anda yakin ingin membatalkan service ini? Service yang dibatalkan tidak dapat diedit kembali.');"
                                     class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center">
-                                    Hapus Service Ini
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                    Batalkan Service Ini
                                 </a>
+                                <?php endif; ?>
                             </div>
 
                         </div>

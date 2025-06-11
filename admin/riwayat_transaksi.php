@@ -20,7 +20,8 @@ $sql_transaksi = "
         c.nama_customer,
         t.tanggal AS tanggal_transaksi,
         t.jenis AS jenis_transaksi,
-        t.total AS total_harga
+        t.total AS total_harga,
+        t.status AS status_transaksi
     FROM
         transaksi t
     JOIN
@@ -158,11 +159,12 @@ $koneksi->close(); // Tutup koneksi setelah semua data diambil
                         <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">ID Pesanan</th>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">ID Transaksi</th>
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Pelanggan</th>
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis Transaksi</th>
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total Harga</th>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
@@ -175,6 +177,27 @@ $koneksi->close(); // Tutup koneksi setelah semua data diambil
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['tanggal_transaksi']); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['jenis_transaksi']); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Rp <?php echo number_format($row['total_harga'], 0, ',', '.'); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                                <?php 
+                                                $statusClass = '';
+                                                switch($row['status_transaksi']) {
+                                                    case 'selesai':
+                                                        $statusClass = 'bg-green-100 text-green-800';
+                                                        break;
+                                                    case 'proses':
+                                                        $statusClass = 'bg-yellow-100 text-yellow-800';
+                                                        break;
+                                                    case 'batal':
+                                                        $statusClass = 'bg-red-100 text-red-800';
+                                                        break;
+                                                    default:
+                                                        $statusClass = 'bg-gray-100 text-gray-800';
+                                                }
+                                                ?>
+                                                <span class="px-2 py-1 rounded-full text-xs font-medium <?php echo $statusClass; ?>">
+                                                    <?php echo ucfirst(htmlspecialchars($row['status_transaksi'])); ?>
+                                                </span>
+                                            </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                 <a href="detail_transaksi.php?id=<?php echo htmlspecialchars($row['id_transaksi']); ?>" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-3 rounded-md shadow-sm transition duration-200 text-xs">Detail</a>
                                             </td>

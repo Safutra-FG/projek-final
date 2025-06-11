@@ -106,6 +106,19 @@ $namaAkun = getNamaUser();
 
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <h2 class="text-xl font-semibold mb-4 text-gray-700">Daftar Data Pelanggan</h2>
+
+                    <!-- Form Pencarian -->
+                    <div class="mb-4">
+                        <form method="GET" class="flex gap-2">
+                            <input type="text" name="search" placeholder="Cari nama atau nomor HP..."
+                                class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>">
+                            <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-200">
+                                Cari
+                            </button>
+                        </form>
+                    </div>
+
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
                             <thead class="bg-gray-50">
@@ -121,18 +134,46 @@ $namaAkun = getNamaUser();
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200 text-center">
                                 <?php
+                                // Konfigurasi Pagination
+                                $items_per_page = 10;
+                                $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+                                $offset = ($page - 1) * $items_per_page;
+
+                                // Query dasar
+                                $base_query = "FROM customer c
+                                    LEFT JOIN service s ON c.id_customer = s.id_customer
+                                    LEFT JOIN transaksi t ON c.id_customer = t.id_customer
+                                    LEFT JOIN detail_service ds ON s.id_service = ds.id_service
+                                    LEFT JOIN stok sp ON ds.id_barang = sp.id_barang";
+
+                                // Tambahkan kondisi pencarian jika ada
+                                $where_clause = "";
+                                if (isset($_GET['search']) && !empty($_GET['search'])) {
+                                    $search = $koneksi->real_escape_string($_GET['search']);
+                                    $where_clause = " WHERE c.nama_customer LIKE '%$search%' OR c.no_telepon LIKE '%$search%'";
+                                }
+
+                                // Query untuk total data
+                                $count_query = "SELECT COUNT(DISTINCT c.id_customer) as total " . $base_query . $where_clause;
+                                $total_result = $koneksi->query($count_query);
+                                $total_rows = $total_result->fetch_assoc()['total'];
+                                $total_pages = ceil($total_rows / $items_per_page);
+
+                                // ... (kode di atasnya biarkan saja)
+                                // Query utama dengan pagination (VERSI FINAL)
                                 $sql = "SELECT 
-                                    c.id_customer,
-                                    c.nama_customer,
-                                    c.no_telepon,
-                                    c.email,
-                                    COUNT(DISTINCT s.id_service) AS total_service,
-                                    COUNT(DISTINCT t.id_transaksi) AS total_pembelian
-                                FROM customer c
-                                LEFT JOIN service s ON c.id_customer = s.id_customer
-                                LEFT JOIN transaksi t ON c.id_customer = t.id_customer
-                                GROUP BY c.id_customer, c.nama_customer, c.no_telepon, email
-                                ORDER BY c.id_customer ASC";
+                                c.id_customer,
+                                c.nama_customer,
+                                c.no_telepon,
+                                c.email,
+                                COUNT(DISTINCT s.id_service) AS total_service,
+                                -- HANYA hitung transaksi penjualan produk murni (id_service di tabel transaksi adalah NULL)
+                                COUNT(DISTINCT CASE WHEN t.id_service IS NULL THEN t.id_transaksi END) AS total_pembelian
+                                " . $base_query . $where_clause . "
+                                GROUP BY c.id_customer, c.nama_customer, c.no_telepon, c.email
+                                ORDER BY c.id_customer ASC
+                                LIMIT $offset, $items_per_page";
+                                // ... (kode di bawahnya biarkan saja)
 
                                 $result = $koneksi->query($sql);
 
@@ -153,11 +194,37 @@ $namaAkun = getNamaUser();
                                 } else {
                                     echo "<tr><td colspan='7' class='px-6 py-4 text-center text-sm text-gray-500'>Belum ada data pelanggan.</td></tr>";
                                 }
-
-                                $koneksi->close(); // Pastikan koneksi ditutup di akhir skrip
                                 ?>
                             </tbody>
                         </table>
+
+                        <!-- Pagination -->
+                        <?php if ($total_pages > 1): ?>
+                            <div class="mt-4 flex justify-center">
+                                <div class="flex space-x-2">
+                                    <?php if ($page > 1): ?>
+                                        <a href="?page=<?php echo $page - 1; ?><?php echo isset($_GET['search']) ? '&search=' . htmlspecialchars($_GET['search']) : ''; ?>"
+                                            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">
+                                            &larr; Sebelumnya
+                                        </a>
+                                    <?php endif; ?>
+
+                                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                                        <a href="?page=<?php echo $i; ?><?php echo isset($_GET['search']) ? '&search=' . htmlspecialchars($_GET['search']) : ''; ?>"
+                                            class="px-4 py-2 <?php echo $i === $page ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'; ?> rounded-md hover:bg-gray-300 transition duration-200">
+                                            <?php echo $i; ?>
+                                        </a>
+                                    <?php endfor; ?>
+
+                                    <?php if ($page < $total_pages): ?>
+                                        <a href="?page=<?php echo $page + 1; ?><?php echo isset($_GET['search']) ? '&search=' . htmlspecialchars($_GET['search']) : ''; ?>"
+                                            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">
+                                            Selanjutnya &rarr;
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 

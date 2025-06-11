@@ -84,32 +84,65 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['simpan_pembayaran'])) 
     // Ambil semua data dari form
     $id_service_proses = $_POST['id_service_proses'];
     $id_customer_proses = $_POST['id_customer_proses'];
-    // $id_user_admin_proses = $_SESSION['admin_id']; // Nanti aktifkan ini
     $total_tagihan_hidden = floatval($_POST['total_tagihan_hidden']);
 
     $tanggal_pembayaran = $_POST['tanggal_pembayaran'];
     $jumlah_dibayar = floatval($_POST['jumlah_dibayar']);
     $metode_pembayaran = $_POST['metode_pembayaran'];
-    $status_pembayaran = $_POST['status_pembayaran']; // 'DP' atau 'Lunas'
+    $status_pembayaran = $_POST['status_pembayaran'];
     $catatan_pembayaran = trim($_POST['catatan_pembayaran']);
 
-
-    // --- PERBAIKAN DIMULAI DI SINI ---
-
-    // 1. Tentukan nilai untuk kolom baru `status` di tabel `transaksi`
-    // Sesuaikan 'Lunas' dan 'Belum Lunas' dengan nilai ENUM di database Anda
+    // Tentukan nilai untuk kolom status di tabel transaksi
     $status_transaksi_db = ($status_pembayaran == 'Lunas') ? 'lunas' : 'menunggu pembayaran';
+
+    // Inisialisasi variabel untuk path bukti pembayaran
+    $path_bukti_pembayaran = null;
+
+    // Proses upload bukti pembayaran jika ada
+    if (isset($_FILES['bukti_pembayaran']) && $_FILES['bukti_pembayaran']['error'] == 0) {
+        $file = $_FILES['bukti_pembayaran'];
+        $file_name = $file['name'];
+        $file_tmp = $file['tmp_name'];
+        $file_size = $file['size'];
+        $file_error = $file['error'];
+
+        // Validasi ukuran file (maksimal 2MB)
+        $max_size = 2 * 1024 * 1024; // 2MB dalam bytes
+        if ($file_size > $max_size) {
+            $error_message_payment = "Ukuran file terlalu besar. Maksimal 2MB.";
+        } else {
+            // Validasi tipe file
+            $allowed_types = ['image/jpeg', 'image/png', 'application/pdf'];
+            $file_type = mime_content_type($file_tmp);
+            
+            if (!in_array($file_type, $allowed_types)) {
+                $error_message_payment = "Tipe file tidak didukung. Gunakan JPG, PNG, atau PDF.";
+            } else {
+                // Buat direktori jika belum ada
+                $upload_dir = "../uploads/bukti_pembayaran/" . date('Y/m');
+                if (!file_exists($upload_dir)) {
+                    mkdir($upload_dir, 0777, true);
+                }
+
+                // Generate nama file unik
+                $file_extension = pathinfo($file_name, PATHINFO_EXTENSION);
+                $new_file_name = "bukti_" . $id_service_proses . "_" . time() . "." . $file_extension;
+                $target_path = $upload_dir . "/" . $new_file_name;
+
+                // Upload file
+                if (move_uploaded_file($file_tmp, $target_path)) {
+                    $path_bukti_pembayaran = "uploads/bukti_pembayaran/" . date('Y/m') . "/" . $new_file_name;
+                } else {
+                    $error_message_payment = "Gagal mengupload file. Silakan coba lagi.";
+                }
+            }
+        }
+    }
 
     // Validasi dasar
     if (empty($id_service_proses) || empty($id_customer_proses) || empty($tanggal_pembayaran) || $jumlah_dibayar <= 0 || empty($metode_pembayaran) || empty($status_pembayaran)) {
         $error_message_payment = "Semua field yang wajib diisi.";
     } else {
-        // Logika upload bukti jika ada (belum diimplementasikan)
-        $path_bukti_pembayaran = null;
-        if (isset($_FILES['bukti_pembayaran']) && $_FILES['bukti_pembayaran']['error'] == 0) {
-            // Logika upload file Anda akan ada di sini
-        }
-
         // Mulai transaksi database
         $koneksi->begin_transaction();
         try {
@@ -345,6 +378,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['simpan_pembayaran'])) 
                                             <option value="Lunas">Lunas</option>
                                             <option value="DP">DP (Down Payment)</option>
                                         </select>
+                                    </div>
+                                    <div>
+                                        <label for="bukti_pembayaran" class="block text-sm font-medium text-gray-700">Bukti Pembayaran</label>
+                                        <input type="file" name="bukti_pembayaran" id="bukti_pembayaran" accept="image/*,.pdf" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <p class="mt-1 text-sm text-gray-500">Format yang didukung: JPG, PNG, PDF (Maks. 2MB)</p>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label for="catatan_pembayaran" class="block text-sm font-medium text-gray-700">Catatan Tambahan</label>
+                                        <textarea name="catatan_pembayaran" id="catatan_pembayaran" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Tambahkan catatan jika diperlukan..."></textarea>
                                     </div>
                                 </div>
                                 <div class="mt-8 flex justify-end">

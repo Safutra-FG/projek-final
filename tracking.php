@@ -98,7 +98,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
                 $hasil_transaksi = $stmt_transaksi->get_result();
                 
                 $list_id_transaksi = [];
-                $status_pembayaran = 'Belum Bayar';
+                $status_pembayaran = 'Menunggu Pembayaran';
                 $first_row = true;
                 while ($row_transaksi = $hasil_transaksi->fetch_assoc()) {
                     $list_id_transaksi[] = $row_transaksi['id_transaksi'];
