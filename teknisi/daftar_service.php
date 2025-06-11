@@ -1,13 +1,13 @@
 <?php
 // daftar_service.php
-include 'koneksi.php';
+include '../koneksi.php';
 
 session_start();
-// Logika otentikasi sederhana (opsional)
-// if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teknisi') {
-//     header("Location: ../login.php");
-//     exit();
-// }
+// Autentikasi: hanya user dengan role teknisi yang boleh mengakses
+if (!isset($_SESSION['user_role']) || strtolower($_SESSION['user_role']) !== 'teknisi') {
+    header("Location: ../login.php");
+    exit();
+}
 
 $namaAkun = "Teknisi";
 
@@ -26,7 +26,7 @@ $sql = "SELECT
             service
         ORDER BY tanggal DESC";
 
-$result = $conn->query($sql);
+$result = $koneksi->query($sql);
 
 if ($result && $result->num_rows > 0) {
     while($row = $result->fetch_assoc()) {
@@ -34,7 +34,7 @@ if ($result && $result->num_rows > 0) {
     }
 }
 
-$conn->close();
+$koneksi->close();
 ?>
 
 <!DOCTYPE html>
@@ -159,7 +159,6 @@ $conn->close();
                                     <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">Keluhan</th>
                                     <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">Status</th>
                                     <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">Tanggal Masuk</th>
-                                    <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
@@ -180,14 +179,11 @@ $conn->close();
                                             </span>
                                         </td>
                                         <td class="py-2 px-4 border-b text-sm text-gray-700"><?php echo htmlspecialchars($servis['tanggal']); ?></td>
-                                        <td class="py-2 px-4 border-b text-sm text-gray-700">
-                                            <a href="progres_service.php?id=<?php echo htmlspecialchars($servis['id_service']); ?>" class="bg-blue-500 hover:bg-blue-600 text-white text-sm py-1 px-3 rounded-md transition duration-200">Lihat/Update</a>
-                                        </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="7" class="py-4 text-center text-gray-500">Tidak ada pesanan servis.</td>
+                                        <td colspan="6" class="py-4 text-center text-gray-500">Tidak ada pesanan servis.</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>

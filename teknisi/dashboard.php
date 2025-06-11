@@ -1,13 +1,13 @@
 <?php
 // dashboard.php (untuk peran Teknisi)
-include 'koneksi.php'; // Pastikan file koneksi.php ada dan benar
+include '../koneksi.php'; // Pastikan file koneksi.php ada dan benar
 
 session_start();
-// Logika otentikasi sederhana (opsional, untuk produksi gunakan yang lebih kuat)
-// if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teknisi') {
-//     header("Location: ../login.php");
-//     exit();
-// }
+// Autentikasi: hanya user dengan role teknisi yang boleh mengakses
+if (!isset($_SESSION['user_role']) || strtolower($_SESSION['user_role']) !== 'teknisi') {
+    header("Location: ../login.php");
+    exit();
+}
 
 $namaAkun = "Teknisi"; // Mengatur nama akun sebagai Teknisi
 
@@ -22,44 +22,44 @@ $today = date("Y-m-d"); // Tanggal hari ini
 // Query untuk total servis hari ini
 // Menggunakan kolom 'tanggal' sebagai tanggal masuk
 $sqlTotal = "SELECT COUNT(*) AS total FROM service WHERE DATE(tanggal) = '$today'";
-$resultTotal = $conn->query($sqlTotal);
+$resultTotal = $koneksi->query($sqlTotal);
 if ($resultTotal && $resultTotal->num_rows > 0) {
     $row = $resultTotal->fetch_assoc();
     $totalServisHariIni = $row['total'];
 }
 
 // Query untuk servis dalam proses
-$sqlDalamProses = "SELECT COUNT(*) AS total FROM service WHERE status = 'Dalam Proses'";
-$resultDalamProses = $conn->query($sqlDalamProses);
+$sqlDalamProses = "SELECT COUNT(*) AS total FROM service WHERE LOWER(status) = 'diperbaiki'";
+$resultDalamProses = $koneksi->query($sqlDalamProses);
 if ($resultDalamProses && $resultDalamProses->num_rows > 0) {
     $row = $resultDalamProses->fetch_assoc();
     $servisDalamProses = $row['total'];
 }
 
 // Query untuk servis menunggu sparepart
-$sqlMenungguSparepart = "SELECT COUNT(*) AS total FROM service WHERE status = 'Menunggu Sparepart'";
-$resultMenungguSparepart = $conn->query($sqlMenungguSparepart);
+$sqlMenungguSparepart = "SELECT COUNT(*) AS total FROM service WHERE LOWER(status) = 'menunggu sparepart'";
+$resultMenungguSparepart = $koneksi->query($sqlMenungguSparepart);
 if ($resultMenungguSparepart && $resultMenungguSparepart->num_rows > 0) {
     $row = $resultMenungguSparepart->fetch_assoc();
     $servisMenungguSparepart = $row['total'];
 }
 
 // Query untuk servis selesai hari ini
-// Menggunakan kolom 'tanggal_selesai' (pastikan kolom ini ada di DB Anda)
-$sqlSelesaiHariIni = "SELECT COUNT(*) AS total FROM service WHERE status = 'Selesai' AND DATE(tanggal_selesai) = '$today'";
-$resultSelesaiHariIni = $conn->query($sqlSelesaiHariIni);
+$sqlSelesaiHariIni = "SELECT COUNT(*) AS total FROM service WHERE LOWER(status) = 'selesai' AND DATE(tanggal_selesai) = '$today'";
+$resultSelesaiHariIni = $koneksi->query($sqlSelesaiHariIni);
 if ($resultSelesaiHariIni && $resultSelesaiHariIni->num_rows > 0) {
     $row = $resultSelesaiHariIni->fetch_assoc();
     $servisSelesaiHariIni = $row['total'];
 }
 
-$conn->close(); // Tutup koneksi database
+$koneksi->close(); // Tutup koneksi database
 ?>
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    
+    <meta http-equiv="refresh" content="30"> <!-- Refresh halaman setiap 30 detik -->
     <title>Dashboard Teknisi - Thar'z Computer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -179,3 +179,6 @@ $conn->close(); // Tutup koneksi database
 
 </body>
 </html>
+<?php
+$koneksi->close(); // Tutup koneksi database setelah semua data digunakan
+?>

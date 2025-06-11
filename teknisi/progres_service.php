@@ -3,12 +3,11 @@
 include 'koneksi.php';
 
 session_start();
-// Anda bisa menambahkan logika otentikasi sesi di sini
-// Misalnya, memeriksa apakah pengguna sudah login dan memiliki peran 'teknisi'
-// if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'teknisi') {
-//      header("Location: ../login.php");
-//      exit();
-// }
+// Autentikasi: hanya user dengan role teknisi yang boleh mengakses
+if (!isset($_SESSION['user_role']) || strtolower($_SESSION['user_role']) !== 'teknisi') {
+    header("Location: ../login.php");
+    exit();
+}
 
 $namaAkun = "Teknisi";
 
