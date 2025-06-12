@@ -2,7 +2,13 @@
 include '../koneksi.php';
 include 'auth.php';
 
-$namaAkun = getNamaUser();
+// Pastikan fungsi ini ada di auth.php atau sesuaikan
+if (function_exists('getNamaUser')) {
+    $namaAkun = getNamaUser();
+} else {
+    // Fallback jika fungsi tidak ditemukan
+    $namaAkun = 'Admin'; 
+}
 
 ?>
 
@@ -64,7 +70,7 @@ $namaAkun = getNamaUser();
                         </a>
                     </li>
                     <li>
-                        <a href="kelola_penjualan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300  hover:bg-gray-700 hover:text-white transition duration-200">
+                        <a href="kelola_penjualan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
                             <span class="text-xl">💰</span>
                             <span class="font-medium">Kelola Penjualan</span>
                         </a>
@@ -102,7 +108,6 @@ $namaAkun = getNamaUser();
         </div>
 
         <div class="flex-1 flex flex-col">
-
             <div class="flex justify-between items-center p-5 bg-white shadow-md">
                 <h2 class="text-2xl font-bold text-gray-800">Data Service</h2>
                 <div class="flex items-center space-x-5">
@@ -118,7 +123,6 @@ $namaAkun = getNamaUser();
             </div>
 
             <div class="flex-1 p-8 overflow-auto">
-
                 <div class="mb-6">
                     <a href="dashboard.php" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-200 text-sm font-medium">
                         &larr; Kembali ke Dashboard
@@ -127,78 +131,90 @@ $namaAkun = getNamaUser();
 
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <h2 class="text-xl font-semibold mb-4 text-gray-700">Daftar Data Service</h2>
-                    <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Pesanan</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Customer</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Keluhan</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <?php
-                            $sql = "SELECT service.*, customer.nama_customer FROM service NATURAL JOIN customer ORDER BY id_service DESC";
-                            $result = $koneksi->query($sql);
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Pesanan</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Keluhan</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <?php
+                                $sql = "SELECT service.*, customer.nama_customer FROM service JOIN customer ON service.id_customer = customer.id_customer ORDER BY id_service DESC";
+                                $result = $koneksi->query($sql);
 
-                            if ($result->num_rows > 0) {
-                                while ($row = $result->fetch_assoc()) {
-                                    echo "<tr>";
-                                    echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>" . htmlspecialchars($row["id_service"]) . "</td>";
-                                    echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>" . htmlspecialchars($row["nama_customer"]) . " (ID: " . htmlspecialchars($row["id_customer"]) . ")</td>";
-                                    echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>" . htmlspecialchars($row["device"]) . "</td>";
-                                    echo "<td class='px-6 py-4 text-sm text-gray-900'>" . htmlspecialchars($row["keluhan"]) . "</td>";
+                                if ($result->num_rows > 0) {
+                                    while ($row = $result->fetch_assoc()) {
+                                        echo "<tr>";
+                                        echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>" . htmlspecialchars($row["id_service"]) . "</td>";
+                                        echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>" . htmlspecialchars($row["nama_customer"]) . "</td>";
+                                        echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>" . htmlspecialchars($row["device"]) . "</td>";
+                                        echo "<td class='px-6 py-4 text-sm text-gray-900'>" . htmlspecialchars($row["keluhan"]) . "</td>";
 
-                                    // Tampilan status
-                                    echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>";
-                                    $statusClass = '';
-                                    switch ($row['status']) {
-                                        case 'diajukan':
-                                            $statusClass = 'bg-gray-100 text-gray-800';
-                                            break;
-                                        case 'dikonfirmasi':
-                                            $statusClass = 'bg-blue-100 text-blue-800';
-                                            break;
-                                        case 'menunggu sparepart':
-                                            $statusClass = 'bg-purple-100 text-purple-800';
-                                            break;
-                                        case 'diperbaiki':
-                                            $statusClass = 'bg-yellow-100 text-yellow-800';
-                                            break;
-                                        case 'selesai':
-                                            $statusClass = 'bg-green-100 text-green-800';
-                                            break;
-                                        case 'dibatalkan':
-                                            $statusClass = 'bg-red-100 text-red-800';
-                                            break;
-                                        default:
-                                            $statusClass = 'bg-gray-100 text-gray-800';
-                                            break;
+                                        // Tampilan status
+                                        echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>";
+                                        $statusClass = '';
+                                        switch ($row['status']) {
+                                            case 'diajukan':
+                                                $statusClass = 'bg-gray-100 text-gray-800';
+                                                break;
+                                            case 'dikonfirmasi':
+                                                $statusClass = 'bg-blue-100 text-blue-800';
+                                                break;
+                                             case 'diverifikasi':
+                                                $statusClass = 'bg-blue-100 text-blue-800';
+                                                break;
+                                            case 'menunggu sparepart':
+                                                $statusClass = 'bg-purple-100 text-purple-800';
+                                                break;
+                                            case 'diperbaiki':
+                                                $statusClass = 'bg-yellow-100 text-yellow-800';
+                                                break;
+                                            case 'selesai':
+                                                $statusClass = 'bg-green-100 text-green-800';
+                                                break;
+                                            case 'dibatalkan':
+                                                $statusClass = 'bg-red-100 text-red-800';
+                                                break;
+                                            default:
+                                                $statusClass = 'bg-gray-100 text-gray-800';
+                                                break;
+                                        }
+                                        echo "<span class='px-2 inline-flex text-xs leading-5 font-semibold rounded-full " . $statusClass . "'>" . ucfirst(htmlspecialchars($row['status'])) . "</span>";
+                                        echo "</td>";
+
+                                        // ========================================================
+                                        // == PERUBAHAN DI SINI: Dua tombol untuk dua aksi berbeda ==
+                                        // ========================================================
+                                        echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-center space-x-2'>";
+                                            // Tombol untuk mengedit detail service
+                                            echo "<a href='edit_service.php?id=" . htmlspecialchars($row['id_service']) . "' class='inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-md shadow-sm transition duration-200' title='Edit Detail Service'>Edit</a>";
+                                            
+                                            // Tombol untuk verifikasi pembayaran
+                                            echo "<a href='verifikas.php?id=" . htmlspecialchars($row['id_service']) . "' class='inline-block bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded-md shadow-sm transition duration-200' title='Verifikasi Pembayaran'>Bayar</a>";
+                                        echo "</td>";
+                                        // ========================================================
+
+                                        echo "</tr>";
                                     }
-                                    echo "<span class='px-2 inline-flex text-xs leading-5 font-semibold rounded-full " . $statusClass . "'>" . ucfirst(htmlspecialchars($row['status'])) . "</span>";
-                                    echo "</td>";
-
-                                    // Tombol "Detail" atau "Edit"
-                                    echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center'>";
-                                    echo "<a href='edit_service.php?id=" . htmlspecialchars($row['id_service']) . "' class='bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm transition duration-200'>Detail/Edit</a>";
-                                    echo "</td>";
-                                    echo "</tr>";
+                                } else {
+                                    echo "<tr><td colspan='7' class='px-6 py-4 text-center text-sm text-gray-500'>Tidak ada data service.</td></tr>";
                                 }
-                            } else {
-                                echo "<tr><td colspan='6' class='px-6 py-4 text-center text-sm text-gray-500'>Tidak ada data service.</td></tr>";
-                            }
 
-                            $koneksi->close();
-                            ?>
-                        </tbody>
-                    </table>
+                                $koneksi->close();
+                                ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
 </body>
-
 </html>

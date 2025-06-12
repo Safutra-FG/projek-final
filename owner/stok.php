@@ -199,41 +199,105 @@ function get_stok_badge_class($jumlah_stok) {
 ?>
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
+    <title>Dashboard Owner - Thraz Computer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kelola Sparepart - Thraz Computer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        .antialiased { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        /* Gaya dasar untuk card, agar lebih menarik dan konsisten dengan Tailwind */
+        .card {
+            background-color: #fff;
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: #4A5568;
+            /* Warna teks yang lebih gelap */
+            font-size: 1.125rem;
+            /* Ukuran font lebih proporsional */
+            margin-bottom: 12px;
+            font-weight: 600;
+            /* Sedikit lebih tebal */
+        }
+
+        .card p {
+            font-size: 2.25em;
+            /* Ukuran angka lebih besar */
+            font-weight: bold;
+            color: #2D3748;
+            /* Warna angka lebih gelap */
+        }
     </style>
 </head>
+
 <body class="bg-gray-100 text-gray-900 font-sans antialiased">
 
     <div class="flex min-h-screen">
-        <aside class="w-64 bg-gray-800 shadow-lg flex flex-col justify-between">
+
+        <div class="w-64 bg-gray-800 shadow-lg flex flex-col justify-between py-6">
             <div>
-                <div class="flex flex-col items-center p-6 text-center">
-                    <img src="../icons/logo.png" alt="Logo Thraz Computer" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
-                    <h1 class="text-xl font-extrabold text-white">Thraz Computer</h1>
+                <div class="flex flex-col items-center mb-10">
+                    <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
+                    <h1 class="text-2xl font-extrabold text-white text-center">Thar'z Computer</h1>
                     <p class="text-sm text-gray-400">Owner Panel</p>
                 </div>
-                <nav class="px-4">
-                    <ul class="space-y-2">
-                        <li><a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200"><i class="fas fa-home fa-fw w-6 text-center"></i><span class="font-medium">Dashboard</span></a></li>
-                        <li><a href="register.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200"><i class="fas fa-users fa-fw w-6 text-center"></i><span class="font-medium">Kelola Akun</span></a></li>
-                        <li><a href="stok.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 font-bold"><i class="fas fa-wrench fa-fw w-6 text-center"></i><span class="font-medium">Kelola Sparepart</span></a></li>
-                        <li><a href="laporan_keuangan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200"><i class="fas fa-chart-line fa-fw w-6 text-center"></i><span class="font-medium">Laporan Keuangan</span></a></li>
-                        <li><a href="laporan_sparepart.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200"><i class="fas fa-boxes fa-fw w-6 text-center"></i><span class="font-medium">Laporan Stok</span></a></li>
-                        <li><a href="laporan_pesanan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200"><i class="fas fa-clipboard-list fa-fw w-6 text-center"></i><span class="font-medium">Laporan Pesanan</span></a></li>
-                    </ul>
-                </nav>
+
+                <ul class="px-6 space-y-3">
+                    <li>
+                        <a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-home w-6 text-center"></i>
+                            <span class="font-medium">Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="register.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-users w-6 text-center"></i>
+                            <span class="font-medium">Kelola Akun</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="stok.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200">
+                            <i class="fas fa-wrench w-6 text-center"></i>
+                            <span class="font-medium">Kelola Sparepart</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_keuangan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-chart-line w-6 text-center"></i>
+                            <span class="font-medium">Laporan Keuangan</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_sparepart.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-boxes w-6 text-center"></i>
+                            <span class="font-medium">Laporan Stok Barang</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan_pesanan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-clipboard-list w-6 text-center"></i>
+                            <span class="font-medium">Laporan Pesanan</span>
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
-                &copy; <?= date("Y") ?> Thraz Computer
+
+             <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
+                &copy; Thar'z Computer 2025
             </div>
-        </aside>
+        </div>
 
         <main class="flex-1 flex flex-col">
             <header class="flex justify-between items-center p-5 bg-white shadow-md">

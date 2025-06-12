@@ -139,7 +139,7 @@ $koneksi->close(); // Tutup koneksi database
             <div>
                 <div class="flex flex-col items-center mb-10">
                     <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
-                    <h1 class="text-2xl font-extrabold text-white text-center">Thraz Computer</h1>
+                    <h1 class="text-2xl font-extrabold text-white text-center">Thar'z Computer</h1>
                     <p class="text-sm text-gray-400">Owner Panel</p>
                 </div>
 
@@ -184,7 +184,7 @@ $koneksi->close(); // Tutup koneksi database
             </div>
 
             <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
-                &copy; Tharz Computer 2025
+                &copy; Thar'z Computer 2025
             </div>
         </div>
 

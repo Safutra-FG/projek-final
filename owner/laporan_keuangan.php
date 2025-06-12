@@ -103,7 +103,7 @@ $koneksi->close();
             <div>
                 <div class="flex flex-col items-center mb-10">
                     <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
-                    <h1 class="text-2xl font-extrabold text-white text-center">Thraz Computer</h1>
+                    <h1 class="text-2xl font-extrabold text-white text-center">Thar'z Computer</h1>
                     <p class="text-sm text-gray-400">Owner Panel</p>
                 </div>
 
@@ -147,7 +147,7 @@ $koneksi->close();
                 </ul>
             </div>
             <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
-                &copy; Thraz Computer 2025
+                &copy; Thar'z Computer 2025
             </div>
         </div>
 
@@ -178,6 +178,9 @@ $koneksi->close();
                             <div class="flex space-x-3">
                                 <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Filter</button>
                                 <a href="laporan_keuangan.php" class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Reset</a>
+                                <a href="laporan_keuangan_cetak.php?start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" target="_blank"
+                                    class="w-full inline-flex justify-center py-0 px-4 border border-green-500 shadow-sm text-sm font-medium rounded-md text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-10 focus:ring-offset-2 focus:ring-green-500">
+                                    Cetak Laporan</a>
                             </div>
                         </div>
                     </form>

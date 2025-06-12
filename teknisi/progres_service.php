@@ -25,7 +25,7 @@ if ($servisId) {
                                   tanggal,
                                   device,
                                   keluhan,
-                                  kerusakan,      -- Kolom yang bisa diupdate/ditambahkan teknisi
+                                  keluhan,      -- Kolom yang bisa diupdate/ditambahkan teknisi
                                   status,         -- Kolom status
                                   estimasi_waktu, -- Kolom estimasi
                                   estimasi_harga  -- Kolom estimasi
