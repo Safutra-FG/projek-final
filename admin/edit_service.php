@@ -578,7 +578,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <div class="w-full lg:w-1/3 px-4">
 
                             <div class="bg-white p-6 rounded-lg shadow-md mb-6 top-6">
-                                <h3 class="text-xl font-semibold text-gray-800 border-b pb-4 mb-6">Form Check</h3>
+                                <h3 class="text-xl font-semibold text-gray-800 border-b pb-4 mb-6">Detail Service</h3>
                                 <?php if ($service['status'] == 'sudah diambil' || $service['status'] == 'dibatalkan'): ?>
                                     <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
                                         <div class="flex">
