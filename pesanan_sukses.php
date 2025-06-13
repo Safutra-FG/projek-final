@@ -139,8 +139,9 @@ if (isset($_GET['id_transaksi'])) {
                             <hr>
                             <p class="mb-1">Konfirmasi dapat dikirimkan melalui salah satu kontak berikut:</p>
                             <ul class="list-unstyled ps-3">
-                                <li><i class="bi bi-whatsapp"></i> WhatsApp: <strong>[WAJIB ISI: Nomor WhatsApp Admin Konfirmasi]</strong></li>
-                                <li><i class="bi bi-envelope-at"></i> Email: <strong>[WAJIB ISI: Alamat Email Admin Konfirmasi]</strong></li>
+                                <li><i class="mb-1">1. pilih metode pembayaran (jika cash, dapat menekan "konfirmasi pembayaran" dan datang ke toko)</i>
+                                <li><i class="mb-1">2. Transfer dan screenshoot bukti pembayarannya</i></li>
+                                <li><i class="mb-1">3. kirimkan bukti pembayaran melalui whatsapp dengan menekan tombol "Konfirmasi Pembayaran"</i></li>
                             </ul>
                         </div>
                         <p class="mt-3 text-center text-muted small">Pesanan Anda akan kami proses setelah pembayaran berhasil diverifikasi.</p>
@@ -148,7 +149,7 @@ if (isset($_GET['id_transaksi'])) {
                 </div>
 
                 <div class="text-center mt-4 py-4 border-top">
-                    <a href="https://wa.link/k70iaj" target="_blank" class="btn btn-primary btn-lg">
+                    <a href="https://wa.link/hvdlbz" target="_blank" class="btn btn-primary btn-lg">
                         <i class="bi bi-whatsapp"></i> Konfirmasi Pembayaran
                     </a>
 

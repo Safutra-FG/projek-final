@@ -370,8 +370,8 @@ $namaAkun = "Customer";
                 <b>i</b>
             </span>
             <div class="info-popup" style="display:none; position:absolute; left:110%; top:50%; transform:translateY(-50%); background:#fff; border:1px solid #bde6fa; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.08); padding:12px 18px; min-width:180px; z-index:10; color:#222;">
-                Ini adalah informasi popup seperti di VS Code.<br>
-                Anda bisa menaruh penjelasan di sini.
+                Jika ada kesalahan atau keluhan.<br>
+                Anda bisa menghubungi cs kami.
             </div>
         </div>
     </div>

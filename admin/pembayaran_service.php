@@ -212,7 +212,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['simpan_pembayaran'])) 
         <div class="flex-1 flex flex-col">
 
             <div class="flex justify-between items-center p-5 bg-white shadow-md">
-                <h2 class="text-2xl font-bold text-gray-800">Riwayat Transaksi</h2>
+                <h2 class="text-2xl font-bold text-gray-800">Pembayaran service</h2>
                 <div class="flex items-center space-x-5">
                     <button class="relative text-gray-600 hover:text-blue-600 transition duration-200" title="Pemberitahuan">
                         <span class="text-2xl">🔔</span>

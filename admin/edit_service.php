@@ -312,35 +312,42 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <head>
     <meta charset="UTF-8">
+    <title>Data Service - Thar'z Computer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Service & Tambah Detail - <?php echo htmlspecialchars($service['id_service']); ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Opsi: Tambahkan font custom atau style dasar di sini jika perlu */
-        body {
-            font-family: 'Inter', sans-serif;
-            /* Contoh menggunakan font Inter */
+        /* Gaya tambahan untuk select agar terlihat lebih rapi dengan Tailwind */
+        .form-select {
+            display: block;
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            color: #4A5568;
+            background-color: #F7FAFC;
+            border: 1px solid #CBD5E0;
+            border-radius: 0.375rem;
+            appearance: none;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
         }
 
-        /* Style untuk input readonly agar lebih jelas */
-        input:read-only,
-        textarea:read-only {
-            background-color: #f3f4f6;
-            /* gray-100 */
-            cursor: not-allowed;
+        .form-select:focus {
+            outline: none;
+            border-color: #63B3ED;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
         }
     </style>
-    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
 </head>
 
-<body class="bg-gray-100">
+<body class="bg-gray-100 text-gray-900 font-sans antialiased">
+
     <div class="flex min-h-screen">
 
         <div class="w-64 bg-gray-800 shadow-lg flex flex-col justify-between py-6">
             <div>
                 <div class="flex flex-col items-center mb-10">
                     <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
-                    <h1 class="text-2xl font-extrabold text-white text-center">Thraz Computer</h1>
+                    <h1 class="text-2xl font-extrabold text-white text-center">Thar'z Computer</h1>
                     <p class="text-sm text-gray-400">Admin Panel</p>
                 </div>
 
@@ -391,14 +398,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
 
             <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
-                &copy; Tharz Computer 2025
+                &copy; Thar'z Computer 2025
             </div>
         </div>
 
         <div class="flex-1 flex flex-col">
 
             <div class="flex justify-between items-center p-5 bg-white shadow-md">
-                <h2 class="text-2xl font-bold text-gray-800">Dashboard</h2>
+                <h2 class="text-2xl font-bold text-gray-800">Detail Service</h2>
                 <div class="flex items-center space-x-5">
                     <button class="relative text-gray-600 hover:text-blue-600 transition duration-200" title="Pemberitahuan">
                         <span class="text-2xl">🔔</span>
@@ -605,6 +612,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                         <select name="status" id="status" class="block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500">
                                             <option value="diajukan" <?php echo ($service['status'] == 'diajukan') ? 'selected' : ''; ?>>Diajukan</option>
                                             <option value="dikonfirmasi" <?php echo ($service['status'] == 'dikonfirmasi') ? 'selected' : ''; ?>>Dikonfirmasi</option>
+                                            <option value="dibayar" <?php echo ($service['status'] == 'dibayar') ? 'selected' : ''; ?>>Dibayar</option>
+                                            <option value="diverifikasi" <?php echo ($service['status'] == 'diverifikasi') ? 'selected' : ''; ?>>Diverifikasi</option>
                                             <option value="menunggu sparepart" <?php echo ($service['status'] == 'menunggu sparepart') ? 'selected' : ''; ?>>Menunggu Sparepart</option>
                                             <option value="diperbaiki" <?php echo ($service['status'] == 'diperbaiki') ? 'selected' : ''; ?>>Diperbaiki</option>
                                             <option value="selesai" <?php echo ($service['status'] == 'selesai') ? 'selected' : ''; ?>>Selesai</option>
