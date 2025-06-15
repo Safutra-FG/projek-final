@@ -4,32 +4,56 @@ include 'auth.php';
 
 $namaAkun = getNamaUser();
 
-// Pastikan koneksi database sudah dibuat dan valid
-if (!isset($koneksi) || !$koneksi instanceof mysqli) {
-    die("Koneksi database belum dibuat atau salah.");
-}
 
 // Logika untuk filtering bulan (jika ada) akan tetap di sini
 $bulan_filter = $_GET['bulan'] ?? date('Y-m'); // Default bulan saat ini (YYYY-MM)
 
-// Query untuk mengambil data transaksi (kolom 'total' di-alias menjadi 'total_harga')
-// Query untuk mengambil data transaksi (kolom 'total' di-alias menjadi 'total_harga')
+
 $sql_transaksi = "
+    WITH RankedTransaksi AS (
+        SELECT
+            t.id_transaksi,
+            c.nama_customer,
+            t.tanggal AS tanggal_transaksi,
+            t.jenis AS jenis_transaksi,
+            t.total AS total_harga,
+            t.status AS status_transaksi,
+            
+            -- Menggunakan kolom 'id_service' dari tabel Anda
+            t.id_service,
+
+            ROW_NUMBER() OVER(
+                PARTITION BY 
+                    CASE 
+                        -- Jika jenisnya 'service', kelompokkan berdasarkan id_service
+                        WHEN t.jenis = 'service' THEN t.id_service 
+                        -- Jika jenis lain, anggap setiap transaksi unik
+                        ELSE t.id_transaksi 
+                    END 
+                -- Urutkan berdasarkan tanggal & ID terbaru untuk mendapatkan yg paling akhir
+                ORDER BY t.tanggal DESC, t.id_transaksi DESC
+            ) as rn
+        FROM
+            transaksi t
+        JOIN
+            customer c ON t.id_customer = c.id_customer
+        WHERE
+            DATE_FORMAT(t.tanggal, '%Y-%m') = ?
+    )
+    -- Langkah terakhir: Pilih HANYA baris yang memiliki peringkat 1
     SELECT
-        t.id_transaksi,
-        c.nama_customer,
-        t.tanggal AS tanggal_transaksi,
-        t.jenis AS jenis_transaksi,
-        t.total AS total_harga,
-        t.status AS status_transaksi
+        id_transaksi,
+        nama_customer,
+        tanggal_transaksi,
+        jenis_transaksi,
+        total_harga,
+        status_transaksi
     FROM
-        transaksi t
-    JOIN
-        customer c ON t.id_customer = c.id_customer
+        RankedTransaksi
     WHERE
-        DATE_FORMAT(t.tanggal, '%Y-%m') = ?
+        rn = 1
     ORDER BY
-        t.tanggal DESC;
+        tanggal_transaksi DESC;
 ";
 
 $stmt_transaksi = $koneksi->prepare($sql_transaksi);
@@ -60,65 +84,7 @@ $koneksi->close(); // Tutup koneksi setelah semua data diambil
 <body class="bg-gray-100 text-gray-900 font-sans antialiased">
 
     <div class="flex min-h-screen">
-
-        <div class="w-64 bg-gray-800 shadow-lg flex flex-col justify-between py-6">
-            <div>
-                <div class="flex flex-col items-center mb-10">
-                    <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
-                    <h1 class="text-2xl font-extrabold text-white text-center">Thar'z Computer</h1>
-                    <p class="text-sm text-gray-400">Admin Panel</p>
-                </div>
-
-                <ul class="px-6 space-y-3">
-                    <li>
-                        <a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">🏠</span>
-                            <span class="font-medium">Dashboard</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="pembayaran_service.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">💰</span>
-                            <span class="font-medium">Pembayaran Service</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="kelola_penjualan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300  hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">💰</span>
-                            <span class="font-medium">Kelola Penjualan</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="data_service.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">📝</span>
-                            <span class="font-medium">Data Service</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="data_pelanggan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">👥</span>
-                            <span class="font-medium">Data Pelanggan</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="riwayat_transaksi.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200">
-                            <span class="text-xl">💳</span>
-                            <span class="font-medium">Riwayat Transaksi</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="stok_gudang.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">📦</span>
-                            <span class="font-medium">Stok Gudang</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
-                &copy; Thar'z Computer 2025
-            </div>
-        </div>
+        <?php include 'includes/sidebar.php'; ?>
 
         <div class="flex-1 flex flex-col">
 
@@ -178,17 +144,14 @@ $koneksi->close(); // Tutup koneksi setelah semua data diambil
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['jenis_transaksi']); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Rp <?php echo number_format($row['total_harga'], 0, ',', '.'); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                                <?php 
+                                                <?php
                                                 $statusClass = '';
-                                                switch($row['status_transaksi']) {
-                                                    case 'selesai':
+                                                switch ($row['status_transaksi']) {
+                                                    case 'lunas':
                                                         $statusClass = 'bg-green-100 text-green-800';
                                                         break;
-                                                    case 'proses':
+                                                    case 'menunggu pembayaran':
                                                         $statusClass = 'bg-yellow-100 text-yellow-800';
-                                                        break;
-                                                    case 'batal':
-                                                        $statusClass = 'bg-red-100 text-red-800';
                                                         break;
                                                     default:
                                                         $statusClass = 'bg-gray-100 text-gray-800';

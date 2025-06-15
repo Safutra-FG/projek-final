@@ -12,3 +12,5 @@
 2025-06-10 18:08:37 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
 2025-06-10 18:08:44 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
 2025-06-10 18:10:42 - MySQL Error during checkout: Unknown column 'status' in 'field list' - SQLSTATE: 42S22
+2025-06-14 21:38:12 - Application Error during checkout: Kuantitas untuk barang "baju" tidak valid.
+2025-06-14 21:38:17 - Application Error during checkout: Kuantitas untuk barang "baju" tidak valid.

@@ -7,7 +7,7 @@ if (function_exists('getNamaUser')) {
     $namaAkun = getNamaUser();
 } else {
     // Fallback jika fungsi tidak ditemukan
-    $namaAkun = 'Admin'; 
+    $namaAkun = 'Admin';
 }
 
 ?>
@@ -47,65 +47,7 @@ if (function_exists('getNamaUser')) {
 <body class="bg-gray-100 text-gray-900 font-sans antialiased">
 
     <div class="flex min-h-screen">
-
-        <div class="w-64 bg-gray-800 shadow-lg flex flex-col justify-between py-6">
-            <div>
-                <div class="flex flex-col items-center mb-10">
-                    <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
-                    <h1 class="text-2xl font-extrabold text-white text-center">Thar'z Computer</h1>
-                    <p class="text-sm text-gray-400">Admin Panel</p>
-                </div>
-
-                <ul class="px-6 space-y-3">
-                    <li>
-                        <a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">🏠</span>
-                            <span class="font-medium">Dashboard</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="pembayaran_service.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">💰</span>
-                            <span class="font-medium">Pembayaran Service</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="kelola_penjualan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">💰</span>
-                            <span class="font-medium">Kelola Penjualan</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="data_service.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200">
-                            <span class="text-xl">📝</span>
-                            <span class="font-medium">Data Service</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="data_pelanggan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">👥</span>
-                            <span class="font-medium">Data Pelanggan</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="riwayat_transaksi.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">💳</span>
-                            <span class="font-medium">Riwayat Transaksi</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="stok_gudang.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">📦</span>
-                            <span class="font-medium">Stok Gudang</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
-                &copy; Thar'z Computer 2025
-            </div>
-        </div>
+        <?php include 'includes/sidebar.php'; ?>
 
         <div class="flex-1 flex flex-col">
             <div class="flex justify-between items-center p-5 bg-white shadow-md">
@@ -166,7 +108,7 @@ if (function_exists('getNamaUser')) {
                                             case 'dikonfirmasi':
                                                 $statusClass = 'bg-blue-100 text-blue-800';
                                                 break;
-                                             case 'diverifikasi':
+                                            case 'diverifikasi':
                                                 $statusClass = 'bg-blue-100 text-blue-800';
                                                 break;
                                             case 'menunggu sparepart':
@@ -187,18 +129,22 @@ if (function_exists('getNamaUser')) {
                                         }
                                         echo "<span class='px-2 inline-flex text-xs leading-5 font-semibold rounded-full " . $statusClass . "'>" . ucfirst(htmlspecialchars($row['status'])) . "</span>";
                                         echo "</td>";
-
-                                        // ========================================================
-                                        // == PERUBAHAN DI SINI: Dua tombol untuk dua aksi berbeda ==
-                                        // ========================================================
                                         echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-center space-x-2'>";
-                                            // Tombol untuk mengedit detail service
-                                            echo "<a href='edit_service.php?id=" . htmlspecialchars($row['id_service']) . "' class='inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-md shadow-sm transition duration-200' title='Edit Detail Service'>Edit</a>";
+                                        if ($row['status'] == 'menunggu konfirmasi') {
                                             
-                                            // Tombol untuk verifikasi pembayaran
-                                            echo "<a href='verifikas.php?id=" . htmlspecialchars($row['id_service']) . "' class='inline-block bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded-md shadow-sm transition duration-200' title='Verifikasi Pembayaran'>Bayar</a>";
-                                        echo "</td>";
-                                        // ========================================================
+                                            $id_service = $row['id_service'];
+
+                                            echo "<a href='konfirmasi_aksi.php?id={$id_service}' 
+                                                    onclick=\"return confirm('Apakah Anda yakin ingin mengkonfirmasi service ini?');\" 
+                                                    class='inline-block bg-blue-500 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-md shadow-sm transition duration-200' 
+                                                    title='Klik untuk mengkonfirmasi'>
+                                                    Konfirmasi
+                                                </a>";
+                                        } else {
+                                            $link_edit = ($row['status'] == 'diajukan') ? 'cek.php' : 'edit_service.php';
+                                            echo "<a href='" . $link_edit . "?id=" . htmlspecialchars($row['id_service']) . "' class='inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-md shadow-sm transition duration-200' title='Edit Detail Service'>Proses</a>";
+                                        }
+                                        echo "</td>"; // ========================================================
 
                                         echo "</tr>";
                                     }
@@ -217,4 +163,5 @@ if (function_exists('getNamaUser')) {
     </div>
 
 </body>
+
 </html>

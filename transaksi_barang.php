@@ -298,7 +298,13 @@ if (isset($koneksi) && !$koneksi->connect_error) {
                         </div>
                         <div class="mb-3">
                             <label for="nohp" class="form-label">Nomor HP</label>
-                            <input type="tel" name="nohp" id="nohp" class="form-control" value="<?= htmlspecialchars($_POST['nohp'] ?? '') ?>" required>
+                            <input type="tel" name="nohp" id="nohp" class="form-control" value="<?= htmlspecialchars($_POST['nohp'] ?? '') ?>" 
+                                pattern="[0-9]{12,13}" 
+                                maxlength="13" 
+                                minlength="12"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                required>
+                            <small class="form-text text-muted">Masukkan 12-13 digit nomor telepon (hanya angka)</small>
                         </div>
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
@@ -356,6 +362,17 @@ if (isset($koneksi) && !$koneksi->connect_error) {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script>
+        document.getElementById('nohp').addEventListener('input', function(e) {
+            // Hapus karakter non-angka
+            this.value = this.value.replace(/[^0-9]/g, '');
+            
+            // Batasi panjang maksimal 13 digit
+            if (this.value.length > 13) {
+                this.value = this.value.slice(0, 13);
+            }
+        });
+    </script>
 </body>
 
 </html>
