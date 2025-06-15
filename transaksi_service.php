@@ -1,9 +1,7 @@
 <?php
-// Konfigurasi database
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'tharz_computer');
+
+session_start();
+include 'koneksi.php';
 
 // Inisialisasi variabel
 $koneksi = null;
@@ -13,15 +11,6 @@ $service_data = null;
 $error_message = null;
 $namaAkun = "Customer"; // Default account name for this page
 
-// Fungsi untuk membuat koneksi database
-function connect_db() {
-    $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-    if ($conn->connect_error) {
-        error_log("Koneksi database gagal: " . $conn->connect_error);
-        die("Terjadi masalah koneksi database. Silakan coba beberapa saat lagi atau hubungi administrator.");
-    }
-    return $conn;
-}
 
 // 1. Ambil dan validasi parameter dari URL
 if (isset($_GET['id_service']) && isset($_GET['amount'])) {
@@ -33,7 +22,7 @@ if (isset($_GET['id_service']) && isset($_GET['amount'])) {
     } elseif ($amount_to_pay === false || $amount_to_pay < 0) {
         $error_message = "Jumlah tagihan tidak valid.";
     } else {
-        $koneksi = connect_db();
+        $koneksi = mysqli_connect("localhost", "root", "", "revisi");
 
         // 2. Ambil data service dan customer
         $sql = "SELECT s.id_service, s.device, c.nama_customer
