@@ -150,9 +150,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 // Update data service utama
                 $id_customer = mysqli_real_escape_string($koneksi, $_POST['id_customer']);
                 $status_baru = mysqli_real_escape_string($koneksi, $_POST['status']);
-                $estimasi_waktu = mysqli_real_escape_string($koneksi, $_POST['estimasi_waktu']);
-                $estimasi_harga_input = trim($_POST['estimasi_harga']);
-                $estimasi_harga = !empty($estimasi_harga_input) ? (float)$estimasi_harga_input : null;
 
                 // Ambil status lama dan tanggal selesai saat ini
                 $query_cek_status_lama = "SELECT status, tanggal_selesai FROM service WHERE id_service = ?";
@@ -182,14 +179,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $set_parts[] = "status = ?";
                 $bind_types_update .= "s";
                 $bind_params_update[] = $status_baru;
-
-                $set_parts[] = "estimasi_waktu = ?";
-                $bind_types_update .= "s";
-                $bind_params_update[] = $estimasi_waktu;
-
-                $set_parts[] = "estimasi_harga = ?";
-                $bind_types_update .= "d";
-                $bind_params_update[] = $estimasi_harga;
 
                 // Logika untuk tanggal_selesai
                 $status_selesai = ['selesai', 'siap diambil'];
@@ -244,21 +233,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         $stmt_harga_jsa->close();
                     }
 
-                    if ($id_barang_val !== null || $id_jasa_val !== null || !empty(trim($kerusakan_detail_val))) {
-                        // Cek stok barang jika ada barang yang dipilih
+                    // Cek apakah ini adalah update atau insert baru
+                    if (!empty($_POST['edit_id_ds'])) {
+                        // Update detail service yang ada
+                        $id_ds = intval($_POST['edit_id_ds']);
+
+                        // Ambil data detail service lama
+                        $stmt_old_detail = $koneksi->prepare("SELECT id_barang FROM detail_service WHERE id_ds = ?");
+                        $stmt_old_detail->bind_param("i", $id_ds);
+                        $stmt_old_detail->execute();
+                        $old_detail = $stmt_old_detail->get_result()->fetch_assoc();
+                        $stmt_old_detail->close();
+
+                        // Kembalikan stok barang lama jika ada
+                        if ($old_detail && $old_detail['id_barang']) {
+                            $stmt_return_stok = $koneksi->prepare("UPDATE stok SET stok = stok + 1 WHERE id_barang = ?");
+                            $stmt_return_stok->bind_param("i", $old_detail['id_barang']);
+                            $stmt_return_stok->execute();
+                            $stmt_return_stok->close();
+                        }
+
+                        // Cek stok barang baru jika ada
                         if ($id_barang_val !== null) {
                             $stmt_cek_stok = $koneksi->prepare("SELECT stok FROM stok WHERE id_barang = ? FOR UPDATE");
                             $stmt_cek_stok->bind_param("i", $id_barang_val);
                             $stmt_cek_stok->execute();
                             $result_stok = $stmt_cek_stok->get_result();
                             $data_stok = $result_stok->fetch_assoc();
-                            
+
                             if ($data_stok['stok'] <= 0) {
                                 $error_messages[] = "Stok barang tidak mencukupi.";
                                 $stmt_cek_stok->close();
                                 return;
                             }
-                            
+
                             // Kurangi stok
                             $stmt_update_stok = $koneksi->prepare("UPDATE stok SET stok = stok - 1 WHERE id_barang = ?");
                             $stmt_update_stok->bind_param("i", $id_barang_val);
@@ -271,15 +279,56 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             $stmt_cek_stok->close();
                         }
 
-                        $stmt_add_detail = $koneksi->prepare("INSERT INTO detail_service (id_service, id_barang, id_jasa, kerusakan, total) VALUES (?, ?, ?, ?, ?)");
-                        if ($stmt_add_detail) {
-                            $stmt_add_detail->bind_param("iiisd", $id_service_post, $id_barang_val, $id_jasa_val, $kerusakan_detail_val, $server_calculated_total_detail);
-                            if (!$stmt_add_detail->execute()) {
-                                $error_messages[] = "Error menambahkan detail service: " . $stmt_add_detail->error;
+                        // Update detail service
+                        $stmt_update_detail = $koneksi->prepare("UPDATE detail_service SET id_barang = ?, id_jasa = ?, kerusakan = ?, total = ? WHERE id_ds = ?");
+                        if ($stmt_update_detail) {
+                            $stmt_update_detail->bind_param("iisdi", $id_barang_val, $id_jasa_val, $kerusakan_detail_val, $server_calculated_total_detail, $id_ds);
+                            if (!$stmt_update_detail->execute()) {
+                                $error_messages[] = "Error mengupdate detail service: " . $stmt_update_detail->error;
                             }
-                            $stmt_add_detail->close();
+                            $stmt_update_detail->close();
                         } else {
-                            $error_messages[] = "Error preparing statement untuk detail service: " . $koneksi->error;
+                            $error_messages[] = "Error preparing statement untuk update detail service: " . $koneksi->error;
+                        }
+                    } else {
+                        // Insert detail service baru
+                        if ($id_barang_val !== null || $id_jasa_val !== null || !empty(trim($kerusakan_detail_val))) {
+                            // Cek stok barang jika ada barang yang dipilih
+                            if ($id_barang_val !== null) {
+                                $stmt_cek_stok = $koneksi->prepare("SELECT stok FROM stok WHERE id_barang = ? FOR UPDATE");
+                                $stmt_cek_stok->bind_param("i", $id_barang_val);
+                                $stmt_cek_stok->execute();
+                                $result_stok = $stmt_cek_stok->get_result();
+                                $data_stok = $result_stok->fetch_assoc();
+
+                                if ($data_stok['stok'] <= 0) {
+                                    $error_messages[] = "Stok barang tidak mencukupi.";
+                                    $stmt_cek_stok->close();
+                                    return;
+                                }
+
+                                // Kurangi stok
+                                $stmt_update_stok = $koneksi->prepare("UPDATE stok SET stok = stok - 1 WHERE id_barang = ?");
+                                $stmt_update_stok->bind_param("i", $id_barang_val);
+                                if (!$stmt_update_stok->execute()) {
+                                    $error_messages[] = "Gagal mengupdate stok barang: " . $stmt_update_stok->error;
+                                    $stmt_update_stok->close();
+                                    return;
+                                }
+                                $stmt_update_stok->close();
+                                $stmt_cek_stok->close();
+                            }
+
+                            $stmt_add_detail = $koneksi->prepare("INSERT INTO detail_service (id_service, id_barang, id_jasa, kerusakan, total) VALUES (?, ?, ?, ?, ?)");
+                            if ($stmt_add_detail) {
+                                $stmt_add_detail->bind_param("iiisd", $id_service_post, $id_barang_val, $id_jasa_val, $kerusakan_detail_val, $server_calculated_total_detail);
+                                if (!$stmt_add_detail->execute()) {
+                                    $error_messages[] = "Error menambahkan detail service: " . $stmt_add_detail->error;
+                                }
+                                $stmt_add_detail->close();
+                            } else {
+                                $error_messages[] = "Error preparing statement untuk detail service: " . $koneksi->error;
+                            }
                         }
                     }
                 }
@@ -315,6 +364,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <title>Data Service - Thar'z Computer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <style>
         /* Gaya tambahan untuk select agar terlihat lebih rapi dengan Tailwind */
         .form-select {
@@ -335,6 +387,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             outline: none;
             border-color: #63B3ED;
             box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+        }
+
+        /* Custom Select2 Styles */
+        .select2-container--default .select2-selection--single {
+            height: 42px;
+            border: 1px solid #CBD5E0;
+            border-radius: 0.375rem;
+            background-color: #F7FAFC;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 42px;
+            padding-left: 0.75rem;
+            color: #4A5568;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 40px;
+        }
+
+        .select2-dropdown {
+            border: 1px solid #CBD5E0;
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: #4299E1;
+        }
+
+        .select2-search__field {
+            padding: 0.5rem;
+            border: 1px solid #CBD5E0;
+            border-radius: 0.375rem;
         }
     </style>
 </head>
@@ -465,6 +551,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                         <span class="text-gray-500">Device / Keluhan:</span>
                                         <p class="font-semibold text-gray-900"><?php echo htmlspecialchars($service['device']); ?> - <?php echo htmlspecialchars($service['keluhan']); ?></p>
                                     </div>
+                                    <div>
+                                        <span class="text-gray-500">Estimasi Waktu:</span>
+                                        <p class="font-semibold text-gray-900"><?php echo htmlspecialchars($service['estimasi_waktu']); ?></p>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">Estimasi Harga:</span>
+                                        <p class="font-semibold text-gray-900">Rp <?php echo number_format($service['estimasi_harga'], 0, ',', '.'); ?></p>
+                                    </div>
                                 </div>
                             </div>
 
@@ -475,8 +569,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                         <div class="w-1/5 ">Id Detail</div>
                                         <div class="w-1/5 ">Service</div>
                                         <div class="w-1/5 md:w-1/5">Jasa</div>
-                                        <div class="w-1/5 text-center">Kerusakan</div>
+                                            <div class="w-1/5 text-center">DESKRIPSI</div>
                                         <div class="w-1/5 text-right">SUBTOTAL</div>
+                                        <div class="w-1/5 text-center"></div>
                                     </div>
                                     <?php
                                     // SETEL ULANG POINTER DATA DI SINI!
@@ -492,6 +587,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                 <div class="w-1/5 md:w-1/5  px-4"><?php echo htmlspecialchars($detail['jenis_jasa'] ?: 'N/A'); ?></div>
                                                 <div class="w-1/5 md:w-1/5 text-center px-4"><?php echo htmlspecialchars($detail['kerusakan']); ?></div>
                                                 <div class="w-1/5 md:w-1/5 text-right font-semibold px-4">Rp <?php echo number_format($detail['total'], 0, ',', '.'); ?></div>
+                                                <div class="w-1/5 md:w-1/5 text-center px-4">
+                                                    <button type="button"
+                                                        onclick="editDetailService(
+                                                                <?php echo $detail['id_ds']; ?>, 
+                                                                '<?php echo addslashes($detail['nama_barang'] ?: ''); ?>', 
+                                                                '<?php echo addslashes($detail['jenis_jasa'] ?: ''); ?>', 
+                                                                '<?php echo addslashes($detail['kerusakan']); ?>', 
+                                                                <?php echo $detail['id_barang'] ? $detail['id_barang'] : 'null'; ?>, 
+                                                                <?php echo $detail['id_jasa'] ? $detail['id_jasa'] : 'null'; ?>
+                                                            )"
+                                                        class="inline-flex items-center justify-center p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-lg transition-colors duration-200 cursor-pointer">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                                        </svg>
+                                                    </button>
+                                                    <button type="button"
+                                                        onclick="hapusDetailService(<?php echo $detail['id_ds']; ?>, <?php echo $detail['id_barang'] ?: 'null'; ?>)"
+                                                        class="inline-flex items-center justify-center p-2 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition-colors duration-200 cursor-pointer" title="Hapus Detail">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </div>
                                         <?php endwhile; ?>
                                     <?php else: ?>
@@ -585,7 +703,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <div class="w-full lg:w-1/3 px-4">
 
                             <div class="bg-white p-6 rounded-lg shadow-md mb-6 top-6">
-                                <h3 class="text-xl font-semibold text-gray-800 border-b pb-4 mb-6">Detail Service</h3>
+                                <h3 class="text-xl font-semibold text-gray-800 border-b pb-4 mb-6">Edit Service</h3>
                                 <?php if ($service['status'] == 'sudah diambil' || $service['status'] == 'dibatalkan'): ?>
                                     <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
                                         <div class="flex">
@@ -606,81 +724,69 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                         </div>
                                     </div>
                                 <?php else: ?>
-                                <div class="space-y-4">
-                                    <div>
-                                        <label for="status" class="block mb-1 text-sm font-medium text-gray-700">Status Service</label>
-                                        <select name="status" id="status" class="block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="diajukan" <?php echo ($service['status'] == 'diajukan') ? 'selected' : ''; ?>>Diajukan</option>
-                                            <option value="dikonfirmasi" <?php echo ($service['status'] == 'dikonfirmasi') ? 'selected' : ''; ?>>Dikonfirmasi</option>
-                                            <option value="dibayar" <?php echo ($service['status'] == 'dibayar') ? 'selected' : ''; ?>>Dibayar</option>
-                                            <option value="diverifikasi" <?php echo ($service['status'] == 'diverifikasi') ? 'selected' : ''; ?>>Diverifikasi</option>
-                                            <option value="menunggu sparepart" <?php echo ($service['status'] == 'menunggu sparepart') ? 'selected' : ''; ?>>Menunggu Sparepart</option>
-                                            <option value="diperbaiki" <?php echo ($service['status'] == 'diperbaiki') ? 'selected' : ''; ?>>Diperbaiki</option>
-                                            <option value="selesai" <?php echo ($service['status'] == 'selesai') ? 'selected' : ''; ?>>Selesai</option>
-                                            <option value="siap diambil" <?php echo ($service['status'] == 'siap diambil') ? 'selected' : ''; ?>>Siap Diambil</option>
-                                        </select>
-                                    </div>
-                                    <?php if ($service['status'] == 'selesai' || $service['status'] == 'siap diambil'): ?>
-                                    <div class="pt-4">
-                                        <a href="konfirmasi_pengambilan.php?id=<?php echo htmlspecialchars($id_service); ?>" 
-                                           onclick="return confirm('Apakah Anda yakin ingin mengkonfirmasi bahwa service ini sudah diambil oleh pelanggan?');"
-                                           class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                                            </svg>
-                                            Konfirmasi Pengambilan Service
-                                        </a>
-                                    </div>
-                                    <?php endif; ?>
-                                    
-                                    <div>
-                                        <label for="estimasi_waktu" class="block mb-1 text-sm font-medium text-gray-700">Estimasi Waktu</label>
-                                        <input type="text" id="estimasi_waktu" name="estimasi_waktu" class="block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500"
-                                            value="<?php echo htmlspecialchars($service['estimasi_waktu']); ?>" maxlength="100">
-                                    </div>
-                                    <div>
-                                        <label for="estimasi_harga" class="block mb-1 text-sm font-medium text-gray-700">Estimasi Harga</label>
-                                        <input type="text" name="estimasi_harga" id="estimasi_harga" class="block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500"
-                                            value="<?php echo htmlspecialchars($service['estimasi_harga']); ?>" maxlength="100">
-                                    </div>
-                                    <div>
-                                        <label for="id_barang" class="block mb-1 text-sm font-medium text-gray-700">Barang (Sparepart):</label>
-                                        <select id="id_barang" name="id_barang" class="block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="">-- Pilih Barang --</option>
-                                            <?php mysqli_data_seek($barangs_result, 0); ?>
-                                            <?php while ($b = mysqli_fetch_assoc($barangs_result)): ?>
-                                                <option value="<?php echo $b['id_barang']; ?>" data-harga="<?php echo $b['harga']; ?>"><?php echo htmlspecialchars($b['nama_barang']); ?></option>
-                                            <?php endwhile; ?>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label for="id_jasa" class="block mb-1 text-sm font-medium text-gray-700">Jasa:</label>
-                                        <select id="id_jasa" name="id_jasa" class="block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="">-- Pilih Jasa --</option>
-                                            <?php mysqli_data_seek($jasas_result, 0); ?>
-                                            <?php while ($j = mysqli_fetch_assoc($jasas_result)): ?>
-                                                <option value="<?php echo $j['id_jasa']; ?>" data-harga="<?php echo $j['harga']; ?>"><?php echo htmlspecialchars($j['jenis_jasa']); ?></option>
-                                            <?php endwhile; ?>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label for="kerusakan_detail" class="block mb-1 text-sm font-medium text-gray-700">Deskripsi/Tindakan:</label>
-                                        <textarea id="kerusakan_detail" name="kerusakan_detail" class="block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500" rows="2"></textarea>
-                                    </div>
-                                    <div>
-                                        <label for="total_detail_display" class="block mb-1 text-sm font-medium text-gray-700">Harga Detail Baru:</label>
-                                        <input type="text" id="total_detail_display" class="block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100" placeholder="Rp 0" readonly>
-                                    </div>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label for="status" class="block mb-1 text-sm font-medium text-gray-700">Status Service</label>
+                                            <select name="status" id="status" class="block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500">
+                                                <option value="dikonfirmasi" <?php echo ($service['status'] == 'dikonfirmasi') ? 'selected' : ''; ?>>Dikonfirmasi</option>
+                                                <option value="menunggu sparepart" <?php echo ($service['status'] == 'menunggu sparepart') ? 'selected' : ''; ?>>Menunggu Sparepart</option>
+                                                <option value="diperbaiki" <?php echo ($service['status'] == 'diperbaiki') ? 'selected' : ''; ?>>Diperbaiki</option>
+                                                <option value="selesai" <?php echo ($service['status'] == 'selesai') ? 'selected' : ''; ?>>Selesai</option>
+                                                <option value="siap diambil" <?php echo ($service['status'] == 'siap diambil') ? 'selected' : ''; ?>>Siap Diambil</option>
+                                            </select>
+                                        </div>
+                                        <?php if ($service['status'] == 'selesai' || $service['status'] == 'siap diambil'): ?>
+                                            <div class="pt-4">
+                                                <a href="konfirmasi_pengambilan.php?id=<?php echo htmlspecialchars($id_service); ?>"
+                                                    onclick="return confirm('Apakah Anda yakin ingin mengkonfirmasi bahwa service ini sudah diambil oleh pelanggan?');"
+                                                    class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                                    </svg>
+                                                    Konfirmasi Pengambilan Service
+                                                </a>
+                                            </div>
+                                        <?php endif; ?>
 
-                                    <div class="pt-4">
-                                        <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                            </svg>
-                                            Simpan Perubahan & Tambah Detail
-                                        </button>
+                                        <div>
+                                            <label for="id_barang" class="block mb-1 text-sm font-medium text-gray-700">Barang (Sparepart):</label>
+                                            <select id="id_barang" name="id_barang" class="select2-barang block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500">
+                                                <option value="">-- Cari Barang --</option>
+                                                <?php mysqli_data_seek($barangs_result, 0); ?>
+                                                <?php while ($b = mysqli_fetch_assoc($barangs_result)): ?>
+                                                    <option value="<?php echo $b['id_barang']; ?>" data-harga="<?php echo $b['harga']; ?>"><?php echo htmlspecialchars($b['nama_barang']); ?> - Rp <?php echo number_format($b['harga'], 0, ',', '.'); ?></option>
+                                                <?php endwhile; ?>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="id_jasa" class="block mb-1 text-sm font-medium text-gray-700">Jasa:</label>
+                                            <select id="id_jasa" name="id_jasa" class="select2-jasa block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500">
+                                                <option value="">-- Cari Jasa --</option>
+                                                <?php mysqli_data_seek($jasas_result, 0); ?>
+                                                <?php while ($j = mysqli_fetch_assoc($jasas_result)): ?>
+                                                    <option value="<?php echo $j['id_jasa']; ?>" data-harga="<?php echo $j['harga']; ?>"><?php echo htmlspecialchars($j['jenis_jasa']); ?> - Rp <?php echo number_format($j['harga'], 0, ',', '.'); ?></option>
+                                                <?php endwhile; ?>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="kerusakan_detail" class="block mb-1 text-sm font-medium text-gray-700">Deskripsi/Tindakan:</label>
+                                            <textarea id="kerusakan_detail" name="kerusakan_detail" class="block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500" rows="2"></textarea>
+                                        </div>
+                                        <input type="hidden" id="edit_id_ds" name="edit_id_ds" value="">
+                                        <div>
+                                            <label for="total_detail_display" class="block mb-1 text-sm font-medium text-gray-700">Harga Detail Baru:</label>
+                                            <input type="text" id="total_detail_display" class="block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100" placeholder="Rp 0" readonly>
+                                        </div>
+
+                                        <div class="pt-4">
+                                            <button type="submit" id="submitButton" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                                </svg>
+                                                <span id="submitButtonText">Simpan Perubahan & Tambah Detail</span>
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
                                 <?php endif; ?>
                             </div>
 
@@ -688,14 +794,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 <h4 class="text-lg font-bold text-red-800">Aksi Berbahaya</h4>
                                 <p class="text-sm text-red-700 mt-1 mb-4">Aksi ini akan membatalkan service ini. Service yang dibatalkan tidak dapat diedit kembali.</p>
                                 <?php if ($service['status'] != 'sudah diambil'): ?>
-                                <a href="batalkan_service.php?id=<?php echo htmlspecialchars($id_service); ?>"
-                                    onclick="return confirm('Anda yakin ingin membatalkan service ini? Service yang dibatalkan tidak dapat diedit kembali.');"
-                                    class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                    </svg>
-                                    Batalkan Service Ini
-                                </a>
+                                    <a href="batalkan_service.php?id=<?php echo htmlspecialchars($id_service); ?>"
+                                        onclick="return confirm('Anda yakin ingin membatalkan service ini? Service yang dibatalkan tidak dapat diedit kembali.');"
+                                        class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                        </svg>
+                                        Batalkan Service Ini
+                                    </a>
                                 <?php endif; ?>
                             </div>
 
@@ -707,6 +813,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Inisialisasi Select2 untuk barang
+            $('.select2-barang').select2({
+                placeholder: "Cari barang...",
+                allowClear: true,
+                width: '100%',
+                language: {
+                    noResults: function() {
+                        return "Barang tidak ditemukan";
+                    }
+                }
+            });
+
+            // Inisialisasi Select2 untuk jasa
+            $('.select2-jasa').select2({
+                placeholder: "Cari jasa...",
+                allowClear: true,
+                width: '100%',
+                language: {
+                    noResults: function() {
+                        return "Jasa tidak ditemukan";
+                    }
+                }
+            });
+
             // --- Script untuk kalkulasi total biaya detail ---
             const barangSelect = document.getElementById('id_barang');
             const jasaSelect = document.getElementById('id_jasa');
@@ -731,38 +861,98 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }) : '';
             }
 
-            if (barangSelect) barangSelect.addEventListener('change', updateTotalDisplay);
-            if (jasaSelect) jasaSelect.addEventListener('change', updateTotalDisplay);
+            // Update total when Select2 selection changes
+            $('.select2-barang, .select2-jasa').on('change', updateTotalDisplay);
             updateTotalDisplay();
 
             // --- Script untuk tanggal selesai dinamis ---
             const statusSelect = document.getElementById('status');
-            const tanggalSelesaiInput = document.getElementById('tanggal_selesai');
-            const originalStatus = '<?php echo htmlspecialchars($service['status']); ?>';
-            const originalTanggalSelesai = tanggalSelesaiInput.value;
+            // Fungsi untuk mengedit detail service
+            window.editDetailService = function(id_ds, nama_barang, jenis_jasa, kerusakan, id_barang, id_jasa) {
+                console.log('Editing detail:', {
+                    id_ds,
+                    nama_barang,
+                    jenis_jasa,
+                    kerusakan,
+                    id_barang,
+                    id_jasa
+                }); // Debug log
 
-            statusSelect.addEventListener('change', function() {
-                if (this.value === 'selesai') {
-                    if (!tanggalSelesaiInput.value || originalStatus !== 'selesai') {
-                        const today = new Date();
-                        const year = today.getFullYear();
-                        const month = ('0' + (today.getMonth() + 1)).slice(-2);
-                        const day = ('0' + today.getDate()).slice(-2);
-                        tanggalSelesaiInput.value = `${year}-${month}-${day}`;
-                    } else {
-                        tanggalSelesaiInput.value = originalTanggalSelesai;
-                    }
+                // Set nilai form
+                document.getElementById('edit_id_ds').value = id_ds;
+                document.getElementById('kerusakan_detail').value = kerusakan;
+
+                // Set nilai select2
+                if (id_barang && id_barang !== 'null') {
+                    $('#id_barang').val(id_barang).trigger('change');
+                } else {
+                    $('#id_barang').val('').trigger('change');
                 }
-            });
 
-            // Inisialisasi saat load
-            if (statusSelect.value === 'selesai' && !tanggalSelesaiInput.value) {
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = ('0' + (today.getMonth() + 1)).slice(-2);
-                const day = ('0' + today.getDate()).slice(-2);
-                tanggalSelesaiInput.value = `${year}-${month}-${day}`;
+                if (id_jasa && id_jasa !== 'null') {
+                    $('#id_jasa').val(id_jasa).trigger('change');
+                } else {
+                    $('#id_jasa').val('').trigger('change');
+                }
+
+                // Update tampilan tombol submit
+                document.getElementById('submitButtonText').textContent = 'Simpan Perubahan Detail';
+                document.getElementById('submitButton').classList.remove('bg-green-500', 'hover:bg-green-600');
+                document.getElementById('submitButton').classList.add('bg-blue-500', 'hover:bg-blue-600');
+
+                // Scroll ke form
+                document.querySelector('.bg-white.p-6.rounded-lg.shadow-md.mb-6.top-6').scrollIntoView({
+                    behavior: 'smooth'
+                });
             }
+            window.hapusDetailService = function(id_ds, id_barang) {
+                // 1. Minta konfirmasi dari pengguna
+                const pesanKonfirmasi = 'Anda yakin ingin menghapus detail ini? Jika detail ini menggunakan sparepart, stok akan dikembalikan.';
+                if (confirm(pesanKonfirmasi)) {
+
+                    // 2. Siapkan data untuk dikirim ke server
+                    const formData = new FormData();
+                    formData.append('id_ds', id_ds);
+                    if (id_barang) {
+                        formData.append('id_barang', id_barang);
+                    }
+
+                    // 3. Kirim permintaan ke server menggunakan Fetch API
+                    fetch('hapus_detail_service.php', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert(data.message);
+                                window.location.reload(); // Muat ulang halaman untuk melihat perubahan
+                            } else {
+                                alert('Error: ' + data.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Terjadi kesalahan:', error);
+                            alert('Tidak dapat terhubung ke server.');
+                        });
+                }
+            }
+
+            // Reset form saat halaman dimuat
+            function resetForm() {
+                document.getElementById('edit_id_ds').value = '';
+                document.getElementById('kerusakan_detail').value = '';
+                $('#id_barang').val('').trigger('change');
+                $('#id_jasa').val('').trigger('change');
+                document.getElementById('submitButtonText').textContent = 'Simpan Perubahan & Tambah Detail';
+                document.getElementById('submitButton').classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                document.getElementById('submitButton').classList.add('bg-green-500', 'hover:bg-green-600');
+            }
+
+            // Tambahkan event listener untuk reset form
+            document.querySelector('form').addEventListener('submit', function() {
+                setTimeout(resetForm, 1000); // Reset form setelah submit
+            });
         });
     </script>
 

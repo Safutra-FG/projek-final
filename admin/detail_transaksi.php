@@ -1,5 +1,3 @@
-P
-
 <?php
 session_start();
 include '../koneksi.php';
@@ -13,9 +11,9 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 }
 $id_transaksi = (int)$_GET['id'];
 
-$namaAkun = "Admin";
+$namaAkun = "Admin"; // Sebaiknya diambil dari session jika sudah ada login
 
-// Query utama, sekarang mengambil id_service juga
+// Query utama, mengambil id_service juga
 $sql_transaksi = "
     SELECT
         t.id_transaksi,
@@ -41,35 +39,20 @@ $result_transaksi = $stmt_transaksi->get_result();
 $transaksi = $result_transaksi->fetch_assoc();
 $stmt_transaksi->close();
 
-// --- KODE DEBUG LANGKAH 1 ---
-if ($transaksi && $transaksi['jenis_transaksi'] == 'Service') {
-    echo "<h1>--- DEBUG MODE AKTIF ---</h1>";
-    echo "<h2>Hasil Pengecekan Data Awal:</h2>";
-    echo "<p><strong>Jenis Transaksi:</strong> " . htmlspecialchars($transaksi['jenis_transaksi']) . "</p>";
-    echo "<p><strong>ID Service yang didapat dari tabel transaksi:</strong> '" . htmlspecialchars($transaksi['id_service']) . "'</p>";
 
-    if (empty($transaksi['id_service'])) {
-        echo "<p style='color:red; font-weight:bold;'>MASALAH DITEMUKAN: Kolom 'id_service' ternyata KOSONG (NULL) atau 0. Kode tidak bisa lanjut mencari detail servis. Cek tabel 'transaksi' di database untuk baris ini.</p>";
-    } else {
-        echo "<p style='color:green; font-weight:bold;'>INFO: Kolom 'id_service' BERHASIL didapatkan. Nilainya tidak kosong.</p>";
-    }
+// --- Blok kode debug yang ada di sini sebelumnya telah dihapus ---
+// Menghapus blok debug memungkinkan skrip untuk melanjutkan ke logika di bawah ini.
 
-    echo "<h3>Data Lengkap di Variabel \$transaksi:</h3>";
-    echo "<pre>";
-    var_dump($transaksi);
-    echo "</pre>";
-    die("--- PROSES DEBUG LANGKAH 1 SELESAI. Kirimkan semua tulisan di atas ini ke saya. ---");
-}
-// --- AKHIR KODE DEBUG LANGKAH 1 ---
 
-// Kode di bawah ini tidak akan dijalankan jika jenisnya Service karena ada 'die()' di atas.
+// Variabel untuk menampung detail
 $details = [];
 $kerusakan = '';
-$detail_title = "Rincian Barang"; 
+$detail_title = "Rincian Barang";
 
 if ($transaksi) {
     $jenis_transaksi = strtolower($transaksi['jenis_transaksi']); // Konversi ke lowercase
-    
+
+    // Logika untuk transaksi 'Penjualan'
     if ($jenis_transaksi == 'penjualan') {
         $detail_title = "Rincian Sparepart Dibeli";
         $sql_details = "
@@ -81,11 +64,12 @@ if ($transaksi) {
         $stmt_details = $koneksi->prepare($sql_details);
         $stmt_details->bind_param("i", $id_transaksi);
 
+        // Logika untuk transaksi 'Service'
     } elseif ($jenis_transaksi == 'service' && !empty($transaksi['id_service'])) {
         $detail_title = "Rincian Biaya & Sparepart Servis";
         $id_service = $transaksi['id_service'];
 
-        // Ambil data dari tabel detail service (ds) sesuai gambar
+        // Ambil data dari tabel detail service (ds)
         $sql_details = "
             SELECT
                 ds.kerusakan,
@@ -110,10 +94,10 @@ if ($transaksi) {
     if (isset($stmt_details)) {
         $stmt_details->execute();
         $result_details = $stmt_details->get_result();
-        
+
         // Proses hasil query yang strukturnya berbeda
         if ($jenis_transaksi == 'penjualan') {
-             while ($row = $result_details->fetch_assoc()) {
+            while ($row = $result_details->fetch_assoc()) {
                 $details[] = $row;
             }
         } elseif ($jenis_transaksi == 'service') {
@@ -136,7 +120,7 @@ if ($transaksi) {
     }
 }
 
-// GROUPING DATA $details
+// Grouping data $details untuk menjumlahkan item yang sama
 if (!empty($details)) {
     $grouped = [];
     foreach ($details as $item) {
@@ -152,30 +136,62 @@ if (!empty($details)) {
 
 // Ambil data pembayaran
 $pembayaran = [];
-$sql_bayar = "SELECT b.*, t.status as status_transaksi FROM bayar b 
-              JOIN transaksi t ON b.id_transaksi = t.id_transaksi 
-              WHERE b.id_transaksi = ? ORDER BY b.tanggal ASC";
-$stmt_bayar = $koneksi->prepare($sql_bayar);
-$stmt_bayar->bind_param("i", $id_transaksi);
-$stmt_bayar->execute();
-$result_bayar = $stmt_bayar->get_result();
-while ($row = $result_bayar->fetch_assoc()) {
-    $pembayaran[] = $row;
+if (strtolower($transaksi['jenis_transaksi']) == 'service' && !empty($transaksi['id_service'])) {
+    // JIKA SERVICE: Cari semua pembayaran yang terkait dengan id_service yang sama.
+    $sql_bayar = "
+        SELECT
+            b.*,
+            t.status as status_transaksi
+        FROM
+            bayar b
+        JOIN
+            transaksi t ON b.id_transaksi = t.id_transaksi
+        WHERE
+            t.id_service = ?  -- Filter berdasarkan id_service
+        ORDER BY
+            b.tanggal desc";
+
+    $stmt_bayar = $koneksi->prepare($sql_bayar);
+    // Binding parameter dengan id_service, bukan id_transaksi dari URL
+    $stmt_bayar->bind_param("s", $transaksi['id_service']);
+} else {
+    // JIKA BUKAN SERVICE (misal: penjualan): Gunakan logika lama, filter berdasarkan id_transaksi
+    $sql_bayar = "
+        SELECT b.*, t.status as status_transaksi
+        FROM bayar b
+        JOIN transaksi t ON b.id_transaksi = t.id_transaksi
+        WHERE b.id_transaksi = ?
+        ORDER BY b.tanggal ASC";
+
+    $stmt_bayar = $koneksi->prepare($sql_bayar);
+    $stmt_bayar->bind_param("i", $id_transaksi);
 }
-$stmt_bayar->close();
+
+// Eksekusi statement dan ambil hasilnya
+if (isset($stmt_bayar)) {
+    $stmt_bayar->execute();
+    $result_bayar = $stmt_bayar->get_result();
+    while ($row = $result_bayar->fetch_assoc()) {
+        $pembayaran[] = $row;
+    }
+    $stmt_bayar->close();
+}
 
 $koneksi->close();
 ?>
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <title>Detail Transaksi - Thar'z Computer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gray-100 text-gray-900 font-sans antialiased">
     <div class="flex min-h-screen">
+
         <div class="w-64 bg-gray-800 shadow-lg flex flex-col justify-between py-6">
             <div>
                 <div class="flex flex-col items-center mb-10">
@@ -214,12 +230,14 @@ $koneksi->close();
                         <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-gray-700">Informasi Transaksi</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div><strong class="text-gray-600">ID Pesanan:</strong> <?php echo htmlspecialchars($transaksi['id_transaksi']); ?></div>
-                            <div><strong class="text-gray-600">Jenis Transaksi:</strong> <span class="font-bold <?php echo $transaksi['jenis_transaksi'] == 'Service' ? 'text-blue-600' : 'text-green-600'; ?>"><?php echo htmlspecialchars($transaksi['jenis_transaksi']); ?></span></div>
-                            <div><strong class="text-gray-600">Status:</strong> 
-                                <span class="font-bold <?php 
-                                    echo $transaksi['status_transaksi'] == 'Selesai' ? 'text-green-600' : 
-                                        ($transaksi['status_transaksi'] == 'Proses' ? 'text-yellow-600' : 'text-red-600'); 
-                                ?>">
+                            <div><strong class="text-gray-600">Jenis Transaksi:</strong> <span class="font-bold <?php echo strtolower($transaksi['jenis_transaksi']) == 'service' ? 'text-blue-600' : 'text-green-600'; ?>"><?php echo htmlspecialchars($transaksi['jenis_transaksi']); ?></span></div>
+                            <div><strong class="text-gray-600">Status:</strong>
+                                <span class="font-bold <?php
+                                                        $status_lower = strtolower($transaksi['status_transaksi']);
+                                                        if ($status_lower == 'lunas' || $status_lower == 'selesai') echo 'text-green-600';
+                                                        elseif ($status_lower == 'proses' || $status_lower == 'menunggu pembayaran') echo 'text-yellow-600';
+                                                        else echo 'text-red-600';
+                                                        ?>">
                                     <?php echo htmlspecialchars($transaksi['status_transaksi']); ?>
                                 </span>
                             </div>
@@ -227,11 +245,11 @@ $koneksi->close();
                             <div><strong class="text-gray-600">No. HP:</strong> <?php echo htmlspecialchars($transaksi['no_telepon']); ?></div>
                             <div><strong class="text-gray-600">Tanggal:</strong> <?php echo date('d F Y', strtotime($transaksi['tanggal_transaksi'])); ?></div>
                         </div>
-                        <?php if ($jenis_transaksi == 'Service' && !empty($kerusakan)): ?>
-                        <div class="mt-4 pt-4 border-t">
-                            <strong class="text-gray-600">Deskripsi Kerusakan:</strong>
-                            <p class="text-gray-800 mt-1"><?php echo nl2br(htmlspecialchars($kerusakan)); ?></p>
-                        </div>
+                        <?php if (strtolower($transaksi['jenis_transaksi']) == 'service' && !empty($kerusakan)): ?>
+                            <div class="mt-4 pt-4 border-t">
+                                <strong class="text-gray-600">Deskripsi Kerusakan:</strong>
+                                <p class="text-gray-800 mt-1"><?php echo nl2br(htmlspecialchars($kerusakan)); ?></p>
+                            </div>
                         <?php endif; ?>
                     </div>
 
@@ -260,7 +278,9 @@ $koneksi->close();
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else : ?>
-                                        <tr><td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada rincian biaya atau sparepart untuk transaksi ini.</td></tr>
+                                        <tr>
+                                            <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada rincian biaya atau sparepart untuk transaksi ini.</td>
+                                        </tr>
                                     <?php endif; ?>
                                 </tbody>
                                 <tfoot class="bg-gray-100">
@@ -297,24 +317,28 @@ $koneksi->close();
                                                 <td class="px-6 py-4 text-center text-sm text-gray-900"><?php echo htmlspecialchars($bayar['metode']); ?></td>
                                                 <td class="px-6 py-4 text-center text-sm text-gray-900">
                                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                        <?php echo $bayar['status'] == 'Lunas' ? 'bg-green-100 text-green-800' : 
-                                                            ($bayar['status'] == 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'); ?>">
+                                                        <?php echo strtolower($bayar['status']) == 'lunas' ? 'bg-green-100 text-green-800' : (strtolower($bayar['status']) == 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'); ?>">
                                                         <?php echo htmlspecialchars($bayar['status']); ?>
                                                     </span>
                                                 </td>
                                                 <td class="px-6 py-4 text-center text-sm text-gray-900">
                                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                        <?php echo $bayar['status_transaksi'] == 'Selesai' ? 'bg-green-100 text-green-800' : 
-                                                            ($bayar['status_transaksi'] == 'Proses' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'); ?>">
+                                                        <?php echo strtolower($bayar['status_transaksi']) == 'selesai' || strtolower($bayar['status_transaksi']) == 'lunas' ? 'bg-green-100 text-green-800' : (strtolower($bayar['status_transaksi']) == 'proses' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'); ?>">
                                                         <?php echo htmlspecialchars($bayar['status_transaksi']); ?>
                                                     </span>
                                                 </td>
-                                                <td class="px-6 py-4 text-center text-sm text-gray-900"><?php if ($bayar['bukti']) { echo '<a href="../' . htmlspecialchars($bayar['bukti']) . '" target="_blank" class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition duration-200"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>Lihat Bukti</a>'; } else { echo '-'; } ?></td>
+                                                <td class="px-6 py-4 text-center text-sm text-gray-900"><?php if ($bayar['bukti']) {
+                                                                                                            echo '<a href="../' . htmlspecialchars($bayar['bukti']) . '" target="_blank" class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition duration-200"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>Lihat Bukti</a>';
+                                                                                                        } else {
+                                                                                                            echo '-';
+                                                                                                        } ?></td>
                                                 <td class="px-6 py-4 text-left text-sm text-gray-900"><?php echo nl2br(htmlspecialchars($bayar['catatan'])); ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else : ?>
-                                        <tr><td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada pembayaran untuk transaksi ini.</td></tr>
+                                        <tr>
+                                            <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada pembayaran untuk transaksi ini.</td>
+                                        </tr>
                                     <?php endif; ?>
                                 </tbody>
                             </table>
@@ -330,4 +354,5 @@ $koneksi->close();
         </div>
     </div>
 </body>
-</html>     
+
+</html>

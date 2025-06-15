@@ -24,7 +24,7 @@ if ($resultTotal && $resultTotal->num_rows > 0) {
 }
 
 // Query untuk servis dalam proses
-$sqlDalamProses = "SELECT COUNT(*) AS total FROM service WHERE status = 'Dalam Proses'";
+$sqlDalamProses = "SELECT COUNT(*) AS total FROM service WHERE status = 'diperbaiki'";
 // FIX 1: Memperbaiki nama variabel dari $resultDalamProproses menjadi $resultDalamProses
 $resultDalamProses = $koneksi->query($sqlDalamProses);
 if ($resultDalamProses && $resultDalamProses->num_rows > 0) { // Baris 35: Sekarang merujuk dengan benar ke $resultDalamProses
@@ -33,7 +33,7 @@ if ($resultDalamProses && $resultDalamProses->num_rows > 0) { // Baris 35: Sekar
 }
 
 // Query untuk servis menunggu sparepart
-$sqlMenungguSparepart = "SELECT COUNT(*) AS total FROM service WHERE status = 'Menunggu Sparepart'";
+$sqlMenungguSparepart = "SELECT COUNT(*) AS total FROM service WHERE status = 'menunggu sparepart'";
 $resultMenungguSparepart = $koneksi->query($sqlMenungguSparepart);
 if ($resultMenungguSparepart && $resultMenungguSparepart->num_rows > 0) {
     $row = $resultMenungguSparepart->fetch_assoc();
@@ -41,7 +41,7 @@ if ($resultMenungguSparepart && $resultMenungguSparepart->num_rows > 0) {
 }
 
 // Query untuk servis selesai hari ini
-$sqlSelesaiHariIni = "SELECT COUNT(*) AS total FROM service WHERE status = 'Selesai' AND DATE(tanggal_selesai) = '$today'";
+$sqlSelesaiHariIni = "SELECT COUNT(*) AS total FROM service WHERE status = 'selesai' || status = 'siap diambil' || status = 'sudah diambil'  AND DATE(tanggal_selesai) = '$today'";
 $resultSelesaiHariIni = $koneksi->query($sqlSelesaiHariIni);
 if ($resultSelesaiHariIni && $resultSelesaiHariIni->num_rows > 0) {
     $row = $resultSelesaiHariIni->fetch_assoc();

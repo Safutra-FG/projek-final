@@ -7,7 +7,7 @@ if (function_exists('getNamaUser')) {
     $namaAkun = getNamaUser();
 } else {
     // Fallback jika fungsi tidak ditemukan
-    $namaAkun = 'Admin'; 
+    $namaAkun = 'Admin';
 }
 
 ?>
@@ -108,7 +108,7 @@ if (function_exists('getNamaUser')) {
                                             case 'dikonfirmasi':
                                                 $statusClass = 'bg-blue-100 text-blue-800';
                                                 break;
-                                             case 'diverifikasi':
+                                            case 'diverifikasi':
                                                 $statusClass = 'bg-blue-100 text-blue-800';
                                                 break;
                                             case 'menunggu sparepart':
@@ -129,18 +129,22 @@ if (function_exists('getNamaUser')) {
                                         }
                                         echo "<span class='px-2 inline-flex text-xs leading-5 font-semibold rounded-full " . $statusClass . "'>" . ucfirst(htmlspecialchars($row['status'])) . "</span>";
                                         echo "</td>";
-
-                                        // ========================================================
-                                        // == PERUBAHAN DI SINI: Dua tombol untuk dua aksi berbeda ==
-                                        // ========================================================
                                         echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-center space-x-2'>";
-                                            // Tombol untuk mengedit detail service
-                                            echo "<a href='edit_service.php?id=" . htmlspecialchars($row['id_service']) . "' class='inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-md shadow-sm transition duration-200' title='Edit Detail Service'>Edit</a>";
+                                        if ($row['status'] == 'menunggu konfirmasi') {
                                             
-                                            // Tombol untuk verifikasi pembayaran
-                                            echo "<a href='verifikas.php?id=" . htmlspecialchars($row['id_service']) . "' class='inline-block bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded-md shadow-sm transition duration-200' title='Verifikasi Pembayaran'>Bayar</a>";
-                                        echo "</td>";
-                                        // ========================================================
+                                            $id_service = $row['id_service'];
+
+                                            echo "<a href='konfirmasi_aksi.php?id={$id_service}' 
+                                                    onclick=\"return confirm('Apakah Anda yakin ingin mengkonfirmasi service ini?');\" 
+                                                    class='inline-block bg-blue-500 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-md shadow-sm transition duration-200' 
+                                                    title='Klik untuk mengkonfirmasi'>
+                                                    Konfirmasi
+                                                </a>";
+                                        } else {
+                                            $link_edit = ($row['status'] == 'diajukan') ? 'cek.php' : 'edit_service.php';
+                                            echo "<a href='" . $link_edit . "?id=" . htmlspecialchars($row['id_service']) . "' class='inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-md shadow-sm transition duration-200' title='Edit Detail Service'>Proses</a>";
+                                        }
+                                        echo "</td>"; // ========================================================
 
                                         echo "</tr>";
                                     }
@@ -159,4 +163,5 @@ if (function_exists('getNamaUser')) {
     </div>
 
 </body>
+
 </html>

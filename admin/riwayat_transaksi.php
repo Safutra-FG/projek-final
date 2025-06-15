@@ -4,32 +4,56 @@ include 'auth.php';
 
 $namaAkun = getNamaUser();
 
-// Pastikan koneksi database sudah dibuat dan valid
-if (!isset($koneksi) || !$koneksi instanceof mysqli) {
-    die("Koneksi database belum dibuat atau salah.");
-}
 
 // Logika untuk filtering bulan (jika ada) akan tetap di sini
 $bulan_filter = $_GET['bulan'] ?? date('Y-m'); // Default bulan saat ini (YYYY-MM)
 
-// Query untuk mengambil data transaksi (kolom 'total' di-alias menjadi 'total_harga')
-// Query untuk mengambil data transaksi (kolom 'total' di-alias menjadi 'total_harga')
+
 $sql_transaksi = "
+    WITH RankedTransaksi AS (
+        SELECT
+            t.id_transaksi,
+            c.nama_customer,
+            t.tanggal AS tanggal_transaksi,
+            t.jenis AS jenis_transaksi,
+            t.total AS total_harga,
+            t.status AS status_transaksi,
+            
+            -- Menggunakan kolom 'id_service' dari tabel Anda
+            t.id_service,
+
+            ROW_NUMBER() OVER(
+                PARTITION BY 
+                    CASE 
+                        -- Jika jenisnya 'service', kelompokkan berdasarkan id_service
+                        WHEN t.jenis = 'service' THEN t.id_service 
+                        -- Jika jenis lain, anggap setiap transaksi unik
+                        ELSE t.id_transaksi 
+                    END 
+                -- Urutkan berdasarkan tanggal & ID terbaru untuk mendapatkan yg paling akhir
+                ORDER BY t.tanggal DESC, t.id_transaksi DESC
+            ) as rn
+        FROM
+            transaksi t
+        JOIN
+            customer c ON t.id_customer = c.id_customer
+        WHERE
+            DATE_FORMAT(t.tanggal, '%Y-%m') = ?
+    )
+    -- Langkah terakhir: Pilih HANYA baris yang memiliki peringkat 1
     SELECT
-        t.id_transaksi,
-        c.nama_customer,
-        t.tanggal AS tanggal_transaksi,
-        t.jenis AS jenis_transaksi,
-        t.total AS total_harga,
-        t.status AS status_transaksi
+        id_transaksi,
+        nama_customer,
+        tanggal_transaksi,
+        jenis_transaksi,
+        total_harga,
+        status_transaksi
     FROM
-        transaksi t
-    JOIN
-        customer c ON t.id_customer = c.id_customer
+        RankedTransaksi
     WHERE
-        DATE_FORMAT(t.tanggal, '%Y-%m') = ?
+        rn = 1
     ORDER BY
-        t.tanggal DESC;
+        tanggal_transaksi DESC;
 ";
 
 $stmt_transaksi = $koneksi->prepare($sql_transaksi);
@@ -61,7 +85,7 @@ $koneksi->close(); // Tutup koneksi setelah semua data diambil
 
     <div class="flex min-h-screen">
         <?php include 'includes/sidebar.php'; ?>
-        
+
         <div class="flex-1 flex flex-col">
 
             <div class="flex justify-between items-center p-5 bg-white shadow-md">
@@ -120,17 +144,14 @@ $koneksi->close(); // Tutup koneksi setelah semua data diambil
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['jenis_transaksi']); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Rp <?php echo number_format($row['total_harga'], 0, ',', '.'); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                                <?php 
+                                                <?php
                                                 $statusClass = '';
-                                                switch($row['status_transaksi']) {
-                                                    case 'selesai':
+                                                switch ($row['status_transaksi']) {
+                                                    case 'lunas':
                                                         $statusClass = 'bg-green-100 text-green-800';
                                                         break;
-                                                    case 'proses':
+                                                    case 'menunggu pembayaran':
                                                         $statusClass = 'bg-yellow-100 text-yellow-800';
-                                                        break;
-                                                    case 'batal':
-                                                        $statusClass = 'bg-red-100 text-red-800';
                                                         break;
                                                     default:
                                                         $statusClass = 'bg-gray-100 text-gray-800';
