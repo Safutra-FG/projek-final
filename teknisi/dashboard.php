@@ -4,7 +4,7 @@ include '../koneksi.php'; // Pastikan file koneksi.php ada dan benar
 
 session_start();
 // Autentikasi: hanya user dengan role teknisi yang boleh mengakses
-if (!isset($_SESSION['user_role']) || strtolower($_SESSION['user_role']) !== 'teknisi') {
+if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'teknisi') {
     header("Location: ../login.php");
     exit();
 }
