@@ -25,7 +25,7 @@ if (isset($_GET['status'])) {
     } elseif ($_GET['status'] == 'success_delete') {
         $pesan = "Barang berhasil dihapus.";
         $pesan_tipe = 'success';
-    } elseif ($_GET['status'] == 'success_update') { // <-- TAMBAHKAN BLOK INI
+    } elseif ($_GET['status'] == 'success_update') {
         $pesan = "Data barang berhasil diperbarui!";
         $pesan_tipe = 'success';
     } elseif ($_GET['status'] == 'error') {
@@ -39,6 +39,7 @@ if (isset($_POST['submit_add'])) {
     $nama = trim($_POST['nama_barang']);
     $stok = filter_input(INPUT_POST, 'stok', FILTER_VALIDATE_INT);
     $harga = filter_input(INPUT_POST, 'harga', FILTER_VALIDATE_FLOAT);
+    $id_kategori = filter_input(INPUT_POST, 'id_kategori', FILTER_VALIDATE_INT); // Get id_kategori
     $nama_gambar = ''; // Variabel untuk menyimpan nama file gambar
 
     // --- LOGIKA UPLOAD GAMBAR ---
@@ -89,11 +90,14 @@ if (isset($_POST['submit_add'])) {
         } elseif ($harga === false || $harga < 0) {
             $pesan = "Harga harus berupa angka non-negatif.";
             $pesan_tipe = 'error';
+        } elseif ($id_kategori === false || $id_kategori <= 0) { // Validate id_kategori
+            $pesan = "Kategori barang tidak valid. Silakan pilih kategori.";
+            $pesan_tipe = 'error';
         } else {
             // Menggunakan prepared statement untuk keamanan
-            $stmt = $koneksi->prepare("INSERT INTO stok (nama_barang, stok, harga, gambar) VALUES (?, ?, ?, ?)");
-            // Tipe data diupdate menjadi "sids" (string, integer, double, string)
-            $stmt->bind_param("sids", $nama, $stok, $harga, $nama_gambar); 
+            $stmt = $koneksi->prepare("INSERT INTO stok (nama_barang, stok, harga, gambar, id_kategori) VALUES (?, ?, ?, ?, ?)");
+            // Tipe data diupdate menjadi "sidsi" (string, integer, double, string, integer)
+            $stmt->bind_param("sidsi", $nama, $stok, $harga, $nama_gambar, $id_kategori); 
 
             if ($stmt->execute()) {
                 header("Location: stok.php?status=success_add");
@@ -138,25 +142,53 @@ if (isset($_GET['hapus'])) {
             header("Location: stok.php?status=error");
             exit();
         }
-        
     }
-    $stmt_delete->close();
 }
+
+
+// --- PENGAMBILAN DATA KATEGORI UNTUK FORM & FILTER ---
+// Menggunakan 'jenis_kategori' sesuai dengan struktur tabel Anda
+$queryKategori = "SELECT id_kategori, jenis_kategori FROM kategori ORDER BY jenis_kategori ASC";
+$resultKategori = $koneksi->query($queryKategori);
+$listKategori = [];
+if ($resultKategori->num_rows > 0) {
+    while ($rowKategori = $resultKategori->fetch_assoc()) {
+        $listKategori[] = $rowKategori;
+    }
+}
+
 
 // --- LOGIKA PENCARIAN & PENGAMBILAN DATA ---
 $search_nama = isset($_GET['search_nama']) ? $koneksi->real_escape_string(trim($_GET['search_nama'])) : '';
-// Query diupdate untuk mengambil kolom 'gambar'
-$sql = "SELECT id_barang, nama_barang, stok, harga, gambar FROM stok";
+$filter_kategori = isset($_GET['filter_kategori']) ? filter_input(INPUT_GET, 'filter_kategori', FILTER_VALIDATE_INT) : ''; 
+
+// Query diupdate untuk mengambil kolom 'gambar' dan 'jenis_kategori'
+// Menggunakan LEFT JOIN agar barang tanpa kategori tetap tampil
+$sql = "SELECT s.id_barang, s.nama_barang, s.stok, s.harga, s.gambar, k.jenis_kategori 
+        FROM stok s
+        LEFT JOIN kategori k ON s.id_kategori = k.id_kategori";
+$conditions = [];
 $params = [];
 $types = '';
 
 if (!empty($search_nama)) {
-    $sql .= " WHERE nama_barang LIKE ?";
+    $conditions[] = "s.nama_barang LIKE ?"; // Menggunakan alias 's'
     $params[] = "%" . $search_nama . "%";
     $types .= 's';
 }
 
-$sql .= " ORDER BY nama_barang ASC";
+if ($filter_kategori !== false && $filter_kategori !== null && $filter_kategori > 0) {
+    $conditions[] = "s.id_kategori = ?";
+    $params[] = $filter_kategori;
+    $types .= 'i';
+}
+
+
+if (!empty($conditions)) {
+    $sql .= " WHERE " . implode(" AND ", $conditions);
+}
+
+$sql .= " ORDER BY s.nama_barang ASC"; // Menggunakan alias 's'
 $stmt_select = $koneksi->prepare($sql);
 
 if (!empty($params)) {
@@ -206,6 +238,11 @@ function get_stok_badge_class($jumlah_stok) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
     <style>
         /* Gaya dasar untuk card, agar lebih menarik dan konsisten dengan Tailwind */
         .card {
@@ -238,6 +275,43 @@ function get_stok_badge_class($jumlah_stok) {
             font-weight: bold;
             color: #2D3748;
             /* Warna angka lebih gelap */
+        }
+
+        /* NEW: Gaya tambahan untuk Select2 agar sesuai dengan Tailwind */
+        .select2-container .select2-selection--single {
+            height: 42px !important; /* Sesuaikan tinggi dengan input lainnya */
+            border: 1px solid #D1D5DB !important; /* Warna border sama dengan input */
+            border-radius: 0.375rem !important; /* Border radius sama */
+            display: flex;
+            align-items: center;
+        }
+        .select2-container .select2-selection--single .select2-selection__rendered {
+            line-height: 40px !important; /* Vertically align text */
+            padding-left: 12px !important; /* Padding kiri */
+            color: #1F2937; /* Warna teks default */
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 40px !important;
+            right: 8px !important; /* Posisi panah */
+        }
+        .select2-container--default .select2-selection--single .select2-selection__placeholder {
+            color: #6B7280; /* Warna placeholder */
+        }
+        /* Style untuk dropdown hasil pencarian */
+        .select2-results__option {
+            padding: 8px 12px;
+            font-size: 0.875rem; /* text-sm */
+            color: #1F2937;
+        }
+        .select2-results__option--highlighted {
+            background-color: #2563EB !important; /* bg-blue-600 */
+            color: white !important;
+        }
+        .select2-search--dropdown .select2-search__field {
+            border: 1px solid #D1D5DB !important;
+            border-radius: 0.375rem !important;
+            padding: 8px 12px !important;
+            width: calc(100% - 24px) !important; /* Mengurangi padding */
         }
     </style>
 </head>
@@ -274,6 +348,12 @@ function get_stok_badge_class($jumlah_stok) {
                         </a>
                     </li>
                     <li>
+                        <a href="kelola_kategori.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-tags w-6 text-center"></i>
+                            <span class="font-medium">Kelola Kategori</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="laporan_keuangan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
                             <i class="fas fa-chart-line w-6 text-center"></i>
                             <span class="font-medium">Laporan Keuangan</span>
@@ -294,7 +374,7 @@ function get_stok_badge_class($jumlah_stok) {
                 </ul>
             </div>
 
-             <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
+            <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
                 &copy; Thar'z Computer 2025
             </div>
         </div>
@@ -332,6 +412,17 @@ function get_stok_badge_class($jumlah_stok) {
                                 <input type="number" id="harga" name="harga" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
                             </div>
                             <div>
+                                <label for="id_kategori" class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                                <select id="id_kategori" name="id_kategori" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                                    <option value="">-- Pilih Kategori --</option>
+                                    <?php foreach ($listKategori as $kategori): ?>
+                                        <option value="<?= htmlspecialchars($kategori['id_kategori']); ?>">
+                                            <?= htmlspecialchars($kategori['jenis_kategori']); ?> 
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div>
                                 <label for="gambar" class="block text-sm font-medium text-gray-700 mb-1">Gambar Barang</label>
                                 <input type="file" id="gambar" name="gambar" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none" accept="image/png, image/jpeg, image/jpg, image/gif">
                                 <p class="mt-1 text-xs text-gray-500">Tipe file: PNG, JPG, JPEG, GIF. Ukuran maks: 2MB.</p>
@@ -348,12 +439,27 @@ function get_stok_badge_class($jumlah_stok) {
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <h3 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-3">Daftar Stok Barang</h3>
                     <div class="bg-gray-50 p-4 rounded-lg mb-6">
-                        <form method="GET" action="stok.php" class="flex items-center space-x-4">
-                            <div class="relative flex-grow">
-                                <label for="search_nama" class="sr-only">Cari Nama Barang</label>
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>
-                                <input type="text" id="search_nama" name="search_nama" value="<?= htmlspecialchars($search_nama); ?>" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Ketik nama barang untuk mencari...">
+                        <form method="GET" action="stok.php" class="flex items-end space-x-4">
+                            <div class="flex-grow">
+                                <label for="search_nama" class="block text-sm font-medium text-gray-700 mb-1">Cari Nama Barang</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>
+                                    <input type="text" id="search_nama" name="search_nama" value="<?= htmlspecialchars($search_nama); ?>" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Ketik nama barang untuk mencari...">
+                                </div>
                             </div>
+
+                            <div>
+                                <label for="filter_kategori" class="block text-sm font-medium text-gray-700 mb-1">Filter Kategori</label>
+                                <select id="filter_kategori" name="filter_kategori" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Semua Kategori</option> <?php foreach ($listKategori as $kategori): ?>
+                                        <option value="<?= htmlspecialchars($kategori['id_kategori']); ?>"
+                                            <?= (isset($filter_kategori) && (string)$filter_kategori === (string)$kategori['id_kategori']) ? 'selected' : ''; ?>>
+                                            <?= htmlspecialchars($kategori['jenis_kategori']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
                             <button type="submit" class="inline-flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Cari</button>
                             <a href="stok.php" class="inline-flex items-center justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Reset</a>
                         </form>
@@ -365,6 +471,7 @@ function get_stok_badge_class($jumlah_stok) {
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Gambar</th>
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Barang</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th> 
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Stok</th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga</th>
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
@@ -377,12 +484,13 @@ function get_stok_badge_class($jumlah_stok) {
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                                             <?php if (!empty($row['gambar'])): ?>
                                                 <img src="../uploads/<?= htmlspecialchars($row['gambar']); ?>" alt="<?= htmlspecialchars($row['nama_barang']); ?>" class="h-12 w-12 object-cover rounded-md mx-auto">
-                                            <?php else: ?>
+                                            <? else: ?>
                                                 <span class="text-xs text-gray-400">No Image</span>
                                             <?php endif; ?>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center"><?= $row['id_barang']; ?></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?= htmlspecialchars($row['nama_barang']); ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?= htmlspecialchars($row['jenis_kategori'] ?? 'Tidak Diketahui'); ?></td> 
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                                             <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full <?= get_stok_badge_class($row['stok']); ?>"><?= $row['stok']; ?></span>
                                         </td>
@@ -397,9 +505,9 @@ function get_stok_badge_class($jumlah_stok) {
                                     <?php endwhile; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
-                                            <?php if (!empty($search_nama)): ?>
-                                                Barang dengan nama "<?= htmlspecialchars($search_nama); ?>" tidak ditemukan.
+                                        <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500"> 
+                                            <?php if (!empty($search_nama) || (!empty($filter_kategori) && $filter_kategori > 0)): ?>
+                                                Barang dengan kriteria yang dicari tidak ditemukan.
                                             <?php else: ?>
                                                 Belum ada data barang di dalam stok.
                                             <?php endif; ?>
@@ -413,5 +521,22 @@ function get_stok_badge_class($jumlah_stok) {
             </div>
         </main>
     </div>
+
+    <script>
+        $(document).ready(function() {
+            // Inisialisasi Select2 untuk dropdown "Pilih Kategori" di form Tambah Barang Baru
+            $('#id_kategori').select2({
+                placeholder: "-- Pilih Kategori --",
+                allowClear: true // Memungkinkan untuk menghapus pilihan
+            });
+
+            // Opsional: Inisialisasi Select2 untuk dropdown "Filter Kategori" di form pencarian
+            // Ini akan memberikan fitur search juga di filter, mirip dengan yang di atas.
+            $('#filter_kategori').select2({
+                placeholder: "Semua Kategori",
+                allowClear: true // Memungkinkan untuk menghapus pilihan filter
+            });
+        });
+    </script>
 </body>
 </html>

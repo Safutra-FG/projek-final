@@ -98,6 +98,12 @@ $koneksi->close();
                         </a>
                     </li>
                     <li>
+                        <a href="kelola_kategori.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-tags w-6 text-center"></i>
+                            <span class="font-medium">Kelola Kategori</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="laporan_keuangan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
                                <i class="fas fa-chart-line w-6 text-center"></i>
                             <span class="font-medium">Laporan Keuangan</span>
@@ -128,7 +134,8 @@ $koneksi->close();
                 <div class="flex items-center space-x-3">
                     <i class="fas fa-user-circle text-xl text-gray-600"></i>
                     <span class="text-lg font-semibold text-gray-700"><?php echo htmlspecialchars($namaAkun); ?></span>
-                    <a href="../logout.php" class="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 text-sm font-medium">Logout</a>
+                    <a href="../logout.php" class="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 text-sm font-medium">
+                        <i class="fas fa-sign-out-alt mr-1"></i>Logout</a>
                 </div>
             </div>
 
