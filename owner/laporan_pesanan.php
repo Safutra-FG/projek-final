@@ -34,20 +34,20 @@ if ($start_date && $end_date) {
 }
 
 $sqlSemuaServis = "SELECT
-                        s.id_service,
-                        c.nama_customer,
-                        s.device,
-                        s.keluhan,
-                        s.status,
-                        s.tanggal,
-                        s.tanggal_selesai
-                      FROM
-                        service s
-                      JOIN
-                        customer c ON s.id_customer = c.id_customer
-                      $where_clause
-                      ORDER BY
-                        s.tanggal DESC, s.id_service DESC";
+                         s.id_service,
+                         c.nama_customer,
+                         s.device,
+                         s.keluhan,
+                         s.status,
+                         s.tanggal,
+                         s.tanggal_selesai
+                       FROM
+                         service s
+                       JOIN
+                         customer c ON s.id_customer = c.id_customer
+                       $where_clause
+                       ORDER BY
+                         s.tanggal DESC, s.id_service DESC";
 $resultSemuaServis = $koneksi->query($sqlSemuaServis);
 
 if ($resultSemuaServis && $resultSemuaServis->num_rows > 0) {
@@ -104,21 +104,27 @@ $koneksi->close();
                             <span class="font-medium">Kelola Kategori</span>
                         </a>
                     </li>
+                     <li>
+                        <a href="kelola_jasa.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-concierge-bell w-6 text-center"></i>
+                            <span class="font-medium">Kelola Jasa</span>
+                        </a>
+                    </li>
                     <li>
                         <a href="laporan_keuangan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                             <i class="fas fa-chart-line w-6 text-center"></i>
+                               <i class="fas fa-chart-line w-6 text-center"></i>
                             <span class="font-medium">Laporan Keuangan</span>
                         </a>
                     </li>
                     <li>
                         <a href="laporan_sparepart.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                             <i class="fas fa-boxes w-6 text-center"></i>
+                               <i class="fas fa-boxes w-6 text-center"></i>
                             <span class="font-medium">Laporan Stok Barang</span>
                         </a>
                     </li>
                     <li>
                         <a href="laporan_pesanan.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200">
-                             <i class="fas fa-clipboard-list w-6 text-center"></i>
+                               <i class="fas fa-clipboard-list w-6 text-center"></i>
                             <span class="font-medium">Laporan Pesanan</span>
                         </a>
                     </li>
@@ -146,7 +152,7 @@ $koneksi->close();
                 <div class="bg-white p-6 rounded-lg shadow-md mb-8">
                     <h3 class="text-xl font-semibold text-gray-800 mb-4">Filter Laporan Pesanan</h3>
                     <form method="GET" action="laporan_pesanan.php">
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
                             <div class="lg:col-span-1">
                                 <label for="status_filter" class="block text-sm font-medium text-gray-700">Status Servis</label>
                                 <select id="status_filter" name="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
@@ -189,7 +195,7 @@ $koneksi->close();
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tgl Selesai</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
+                            <tbody id="pesanan-tbody" class="bg-white divide-y divide-gray-200">
                                 <?php if (empty($dataSemuaServis)): ?>
                                     <tr>
                                         <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data pesanan servis yang cocok dengan filter.</td>
@@ -229,10 +235,84 @@ $koneksi->close();
                             </tbody>
                         </table>
                     </div>
-                </div>
+                    
+                    <div id="pagination-controls" class="mt-6 flex justify-center items-center space-x-4" style="display: none;">
+                        <button id="prev-page-btn" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Sebelumnya
+                        </button>
+                        <span id="page-counter" class="text-sm text-gray-700"></span>
+                        <button id="next-page-btn" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Berikutnya
+                        </button>
+                    </div>
 
+                </div>
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const rowsPerPage = 9;
+            const tableBody = document.getElementById('pesanan-tbody');
+            if (!tableBody) return;
+
+            const allRows = Array.from(tableBody.querySelectorAll('tr'));
+            const totalRows = allRows.length;
+            
+            // Cek jika barisnya hanya berisi pesan "tidak ada data"
+            if (totalRows === 1 && allRows[0].querySelectorAll('td').length === 1) {
+                return;
+            }
+
+            const totalPages = Math.ceil(totalRows / rowsPerPage);
+            let currentPage = 1;
+
+            const prevBtn = document.getElementById('prev-page-btn');
+            const nextBtn = document.getElementById('next-page-btn');
+            const pageCounter = document.getElementById('page-counter');
+            const paginationControls = document.getElementById('pagination-controls');
+
+            function displayPage(page) {
+                allRows.forEach(row => row.style.display = 'none');
+                const startIndex = (page - 1) * rowsPerPage;
+                const endIndex = startIndex + rowsPerPage;
+                const pageRows = allRows.slice(startIndex, endIndex);
+                pageRows.forEach(row => row.style.display = ''); // Mengembalikan ke display default (table-row)
+            }
+
+            function updatePaginationControls() {
+                if (totalPages <= 1) {
+                    paginationControls.style.display = 'none';
+                    return;
+                }
+                paginationControls.style.display = 'flex';
+                prevBtn.disabled = (currentPage === 1);
+                nextBtn.disabled = (currentPage === totalPages);
+                pageCounter.textContent = `Halaman ${currentPage} dari ${totalPages}`;
+            }
+
+            nextBtn.addEventListener('click', function() {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayPage(currentPage);
+                    updatePaginationControls();
+                }
+            });
+
+            prevBtn.addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayPage(currentPage);
+                    updatePaginationControls();
+                }
+            });
+            
+            if (totalRows > 0) {
+                displayPage(1);
+                updatePaginationControls();
+            }
+        });
+    </script>
 </body>
 </html>

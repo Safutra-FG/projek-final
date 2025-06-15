@@ -285,12 +285,15 @@ $namaAkun = "Customer";
                         <label for="nama" class="form-label">Nama Lengkap <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="nama" name="nama" placeholder="Masukkan nama lengkap" required>
                     </div>
-
                     <div class="mb-3">
-                        <label for="nomor_telepon" class="form-label">Nomor Handphone <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="nomor_telepon" name="nomor_telepon" pattern="\d{10,12}" maxlength="12" placeholder="Contoh: 081234567890" required>
-                        <div class="form-text">* Nomor harus 10-12 digit angka</div>
-                    </div>
+                            <label for="nohp" class="form-label">Nomor HP</label>
+                            <input type="text" class="form-control" id="nomor_telepon" name="nomor_telepon" pattern="\d{10,12}" maxlength="12" placeholder="Contoh: 081234567890" required value="<?= htmlspecialchars($_POST['nomor_telepon'] ?? '') ?>" 
+                                pattern="[0-9]{12,13}" 
+                                maxlength="13" 
+                                minlength="12"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                required>
+                        </div>
 
                     <div class="mb-3">
                         <label for="email" class="form-label">Alamat Email <span class="text-danger">*</span></label>

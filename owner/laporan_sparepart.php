@@ -103,6 +103,12 @@ $koneksi->close();
                             <span class="font-medium">Kelola Kategori</span>
                         </a>
                     </li>
+                     <li>
+                        <a href="kelola_jasa.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-concierge-bell w-6 text-center"></i>
+                            <span class="font-medium">Kelola Jasa</span>
+                        </a>
+                    </li>
                     <li>
                         <a href="laporan_keuangan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
                                <i class="fas fa-chart-line w-6 text-center"></i>
@@ -175,7 +181,7 @@ $koneksi->close();
                                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Harga</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
+                            <tbody id="laporan-stok-tbody" class="bg-white divide-y divide-gray-200">
                                 <?php if (empty($dataStokBarang)): ?>
                                     <tr>
                                         <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data barang yang cocok dengan pencarian.</td>
@@ -208,10 +214,84 @@ $koneksi->close();
                             </tbody>
                         </table>
                     </div>
-                </div>
 
+                    <div id="pagination-controls" class="mt-6 flex justify-center items-center space-x-4" style="display: none;">
+                        <button id="prev-page-btn" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Sebelumnya
+                        </button>
+                        <span id="page-counter" class="text-sm text-gray-700"></span>
+                        <button id="next-page-btn" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Berikutnya
+                        </button>
+                    </div>
+
+                </div>
             </div>
         </div>
     </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const rowsPerPage = 9;
+            const tableBody = document.getElementById('laporan-stok-tbody');
+            if (!tableBody) return;
+
+            const allRows = Array.from(tableBody.querySelectorAll('tr'));
+            const totalRows = allRows.length;
+            
+            // Cek jika barisnya hanya berisi pesan "tidak ada data"
+            if (totalRows === 1 && allRows[0].querySelectorAll('td').length === 1) {
+                return;
+            }
+
+            const totalPages = Math.ceil(totalRows / rowsPerPage);
+            let currentPage = 1;
+
+            const prevBtn = document.getElementById('prev-page-btn');
+            const nextBtn = document.getElementById('next-page-btn');
+            const pageCounter = document.getElementById('page-counter');
+            const paginationControls = document.getElementById('pagination-controls');
+
+            function displayPage(page) {
+                allRows.forEach(row => row.style.display = 'none');
+                const startIndex = (page - 1) * rowsPerPage;
+                const endIndex = startIndex + rowsPerPage;
+                const pageRows = allRows.slice(startIndex, endIndex);
+                pageRows.forEach(row => row.style.display = ''); // Mengembalikan ke display default (table-row)
+            }
+
+            function updatePaginationControls() {
+                if (totalPages <= 1) {
+                    paginationControls.style.display = 'none';
+                    return;
+                }
+                paginationControls.style.display = 'flex';
+                prevBtn.disabled = (currentPage === 1);
+                nextBtn.disabled = (currentPage === totalPages);
+                pageCounter.textContent = `Halaman ${currentPage} dari ${totalPages}`;
+            }
+
+            nextBtn.addEventListener('click', function() {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayPage(currentPage);
+                    updatePaginationControls();
+                }
+            });
+
+            prevBtn.addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayPage(currentPage);
+                    updatePaginationControls();
+                }
+            });
+            
+            if (totalRows > 0) {
+                displayPage(1);
+                updatePaginationControls();
+            }
+        });
+    </script>
 </body>
 </html>

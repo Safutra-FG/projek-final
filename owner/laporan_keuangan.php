@@ -44,40 +44,40 @@ if ($resultPendapatan && $resultPendapatan->num_rows > 0) {
 
 // Query untuk detail transaksi (servis selesai sebagai pendapatan)
 $sqlTransaksi = "SELECT
-                    s.id_service AS id_transaksi,
-                    c.nama_customer AS deskripsi,
-                    s.estimasi_harga AS jumlah,
-                    s.tanggal_selesai AS tanggal_transaksi,
-                    'Pendapatan Servis' AS jenis_transaksi
-                  FROM
-                    service s
-                  JOIN
-                    customer c ON s.id_customer = c.id_customer
-                  $where_clause
-                  ORDER BY
-                    s.tanggal_selesai ASC"; // Order by ASC untuk grafik time-series
+                     s.id_service AS id_transaksi,
+                     c.nama_customer AS deskripsi,
+                     s.estimasi_harga AS jumlah,
+                     s.tanggal_selesai AS tanggal_transaksi,
+                     'Pendapatan Servis' AS jenis_transaksi
+                   FROM
+                     service s
+                   JOIN
+                     customer c ON s.id_customer = c.id_customer
+                   $where_clause
+                   ORDER BY
+                     s.tanggal_selesai DESC"; // Order by DESC untuk menampilkan transaksi terbaru di atas
 
 $resultTransaksi = $koneksi->query($sqlTransaksi);
 if ($resultTransaksi && $resultTransaksi->num_rows > 0) {
     while ($row = $resultTransaksi->fetch_assoc()) {
         $dataTransaksi[] = $row;
-
-        // Kumpulkan data pendapatan harian untuk grafik
-        $tanggal = date('Y-m-d', strtotime($row['tanggal_transaksi']));
-        if (!isset($dataPendapatanHarian[$tanggal])) {
-            $dataPendapatanHarian[$tanggal] = 0;
-        }
-        $dataPendapatanHarian[$tanggal] += $row['jumlah'];
     }
 }
 
-// Urutkan data pendapatan harian berdasarkan tanggal
-ksort($dataPendapatanHarian);
+// Kumpulkan data untuk grafik (diurutkan per tanggal)
+$dataPendapatanGrafik = [];
+foreach ($dataTransaksi as $transaksi) {
+    $tanggal = date('Y-m-d', strtotime($transaksi['tanggal_transaksi']));
+    if (!isset($dataPendapatanGrafik[$tanggal])) {
+        $dataPendapatanGrafik[$tanggal] = 0;
+    }
+    $dataPendapatanGrafik[$tanggal] += $transaksi['jumlah'];
+}
+ksort($dataPendapatanGrafik);
 
 // Siapkan data untuk JavaScript
-// Gunakan $dataPendapatanHarian, bukan $dataPendapatanPerTanggal
-$labels = json_encode(array_keys($dataPendapatanHarian));
-$values = json_encode(array_values($dataPendapatanHarian));
+$labels = json_encode(array_keys($dataPendapatanGrafik));
+$values = json_encode(array_values($dataPendapatanGrafik));
 
 // Tutup koneksi database
 $koneksi->close();
@@ -130,6 +130,12 @@ $koneksi->close();
                         <a href="kelola_kategori.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
                             <i class="fas fa-tags w-6 text-center"></i>
                             <span class="font-medium">Kelola Kategori</span>
+                        </a>
+                    </li>
+                     <li>
+                        <a href="kelola_jasa.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
+                            <i class="fas fa-concierge-bell w-6 text-center"></i>
+                            <span class="font-medium">Kelola Jasa</span>
                         </a>
                     </li>
                     <li>
@@ -185,9 +191,12 @@ $koneksi->close();
                             <div class="flex space-x-3">
                                 <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Filter</button>
                                 <a href="laporan_keuangan.php" class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Reset</a>
+                            </div>
+                            <div>
                                 <a href="laporan_keuangan_cetak.php?start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" target="_blank"
-                                    class="w-full inline-flex justify-center py-0 px-4 border border-green-500 shadow-sm text-sm font-medium rounded-md text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-10 focus:ring-offset-2 focus:ring-green-500">
-                                    Cetak Laporan</a>
+                                   class="w-full inline-flex justify-center items-center py-2 px-4 border border-green-500 shadow-sm text-sm font-medium rounded-md text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                   <i class="fas fa-print mr-2"></i>Cetak Laporan
+                                </a>
                             </div>
                         </div>
                     </form>
@@ -220,7 +229,7 @@ $koneksi->close();
                                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
+                            <tbody id="transaksi-tbody" class="bg-white divide-y divide-gray-200">
                                 <?php if (empty($dataTransaksi)): ?>
                                     <tr>
                                         <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data transaksi pada periode ini.</td>
@@ -229,7 +238,7 @@ $koneksi->close();
                                     <?php foreach ($dataTransaksi as $transaksi): ?>
                                         <tr>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                                <?php echo htmlspecialchars(date('d M Y', strtotime($transaksi['tanggal_transaksi']))); ?>
+                                                <?php echo htmlspecialchars(date('d M Y, H:i', strtotime($transaksi['tanggal_transaksi']))); ?>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
@@ -248,28 +257,30 @@ $koneksi->close();
                             </tbody>
                         </table>
                     </div>
-                </div>
 
+                    <div id="pagination-controls" class="mt-6 flex justify-center items-center space-x-4" style="display: none;">
+                        <button id="prev-page-btn" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Sebelumnya
+                        </button>
+                        <span id="page-counter" class="text-sm text-gray-700"></span>
+                        <button id="next-page-btn" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Berikutnya
+                        </button>
+                    </div>
+
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         // Data dari PHP untuk Chart.js
-        const labels = <?php echo $labels; ?>; // Sudah di-JSON encode di PHP
-        const values = <?php echo $values; ?>; // Sudah di-JSON encode di PHP
-
-        // --- DEBUGGING CONSOLE LOGS ---
-        console.log("-----------------------------------------");
-        console.log("DEBUG: Data Labels dari PHP:", labels);
-        console.log("DEBUG: Data Values dari PHP:", values);
-        console.log("-----------------------------------------");
+        const labels = <?php echo $labels; ?>;
+        const values = <?php echo $values; ?>;
 
         const ctx = document.getElementById('pendapatanChart'); 
         
-        // --- DEBUGGING: Periksa apakah elemen canvas ditemukan ---
         if (ctx) { 
-            console.log("DEBUG: Elemen canvas 'pendapatanChart' Ditemukan.");
             const pendapatanChart = new Chart(ctx, {
                 type: 'line', 
                 data: {
@@ -277,8 +288,8 @@ $koneksi->close();
                     datasets: [{
                         label: 'Pendapatan Harian (Rp)',
                         data: values, 
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)', 
-                        borderColor: 'rgba(75, 192, 192, 1)', 
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)', 
+                        borderColor: 'rgba(59, 130, 246, 1)', 
                         borderWidth: 2,
                         tension: 0.4, 
                         fill: true 
@@ -292,9 +303,9 @@ $koneksi->close();
                             type: 'time', 
                             time: {
                                 unit: 'day', 
-                                tooltipFormat: 'dd MMMM YYYY', // Perbaiki format tooltip
+                                tooltipFormat: 'DD MMMM YYYY',
                                 displayFormats: {
-                                    day: 'dd MMM' 
+                                    day: 'DD MMM' 
                                 }
                             },
                             title: {
@@ -333,9 +344,70 @@ $koneksi->close();
                     }
                 }
             });
-        } else {
-            console.error("DEBUG: Elemen canvas dengan ID 'pendapatanChart' TIDAK ditemukan. Pastikan ada di HTML.");
         }
+
+        // --- PERUBAHAN BARU: Logika Paginasi untuk Tabel Transaksi ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const rowsPerPage = 9;
+            const tableBody = document.getElementById('transaksi-tbody');
+            if (!tableBody) return;
+
+            const allRows = Array.from(tableBody.querySelectorAll('tr'));
+            const totalRows = allRows.length;
+            
+            // Cek jika barisnya hanya berisi pesan "tidak ada data"
+            if (totalRows === 1 && allRows[0].querySelectorAll('td').length === 1) {
+                return;
+            }
+
+            const totalPages = Math.ceil(totalRows / rowsPerPage);
+            let currentPage = 1;
+
+            const prevBtn = document.getElementById('prev-page-btn');
+            const nextBtn = document.getElementById('next-page-btn');
+            const pageCounter = document.getElementById('page-counter');
+            const paginationControls = document.getElementById('pagination-controls');
+
+            function displayPage(page) {
+                allRows.forEach(row => row.style.display = 'none');
+                const startIndex = (page - 1) * rowsPerPage;
+                const endIndex = startIndex + rowsPerPage;
+                const pageRows = allRows.slice(startIndex, endIndex);
+                pageRows.forEach(row => row.style.display = '');
+            }
+
+            function updatePaginationControls() {
+                if (totalPages <= 1) {
+                    paginationControls.style.display = 'none';
+                    return;
+                }
+                paginationControls.style.display = 'flex';
+                prevBtn.disabled = (currentPage === 1);
+                nextBtn.disabled = (currentPage === totalPages);
+                pageCounter.textContent = `Halaman ${currentPage} dari ${totalPages}`;
+            }
+
+            nextBtn.addEventListener('click', function() {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayPage(currentPage);
+                    updatePaginationControls();
+                }
+            });
+
+            prevBtn.addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayPage(currentPage);
+                    updatePaginationControls();
+                }
+            });
+            
+            if (totalRows > 0) {
+                displayPage(1);
+                updatePaginationControls();
+            }
+        });
     </script>
 </body>
 </html>
