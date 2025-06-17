@@ -267,8 +267,8 @@ $uploadDir = 'uploads/';
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item"> <a class="nav-link" href="#layanan-kami">Layanan Kami</a> </li>
                         <li class="nav-item"> <a class="nav-link" href="#sparepart-tersedia">Sparepart Tersedia</a> </li>
-                        <li class="nav-item"> <a class="nav-link" href="#tentang-kami">Tentang Thar'z Computer</a> </li>
-                        <li class="nav-item"> <a class="nav-link" href="#mengapa-memilih-kami">Mengapa Memilih Kami?</a> </li>
+                        <li class="nav-item"> <a class="nav-link" href="#tentang-kami">Tentang Kami</a> </li>
+                        <li class="nav-item"> <a class="nav-link" href="#mengapa-memilih-kami">Mengapa Kami?</a> </li>
                         <li class="nav-item"> <a class="nav-link" href="#hubungi-kami">Hubungi Kami</a> </li>
                         <li class="nav-item"> <a class="btn btn-outline-light ms-lg-3" href="login.php">Login</a> </li>
                     </ul>
@@ -347,7 +347,6 @@ $uploadDir = 'uploads/';
                 <?php else: ?>
                     <p class='text-center text-muted'>Saat ini belum ada sparepart yang tersedia.</p>
                 <?php endif; ?>
-
                 <div class="text-center mt-5">
                     <a href="barang.php" class="btn btn-outline-primary btn-lg">Lihat Halaman Belanja</a>
                 </div>
@@ -358,11 +357,7 @@ $uploadDir = 'uploads/';
                 <h2 class="section-heading">Tentang Thar'z Computer</h2>
                 <div class="row justify-content-center">
                     <div class="col-lg-8">
-                        <p class="lead mb-4"> Thar'z Computer adalah UMKM yang didirikan pada awal Mei 2024 dan berlokasi di Jl. Brigjen Katamso (Pertigaan Ciereng – Nusa Indah – Wera), Kelurahan Dangdeur, Kecamatan/Kabupaten Subang, Jawa Barat. Kami bergerak di bidang jasa servis perangkat elektronik serta penjualan aksesoris komputer. </p>
-                        <p class="mb-4"> Saat ini, Thar'z Computer memiliki tiga karyawan: Owner, Admin, dan Teknisi. Pelanggan kami umumnya datang untuk memperbaiki perangkat elektronik, membeli sparepart, atau sekadar berkonsultasi mengenai masalah perangkat mereka. </p>
-                        <p class="mb-4"> Dalam operasionalnya, kami menghadapi beberapa kendala seperti kesulitan mengelola antrean servis, pencatatan stok barang yang masih manual, dan komunikasi yang kurang efektif dengan pelanggan. Hal ini sering menyebabkan pelanggan harus datang langsung ke konter untuk menanyakan status servis, yang dapat mengganggu efisiensi kerja teknisi dan admin. </p>
-                        <p class="mb-0"> Untuk meningkatkan layanan dan mengatasi kendala tersebut, kami bekerja sama dengan tim pengembangan untuk membangun sistem tracking servis berbasis web. Sistem ini bertujuan untuk meningkatkan efisiensi layanan, mengoptimalkan manajemen stok, serta mempermudah transaksi dan pencatatan keuangan, sekaligus meningkatkan transparansi informasi kepada pelanggan. Selain itu, kami juga telah menjalin kerja sama dengan V-GEN dan ROBOT sebagai distributor produk tertentu, seperti sparepart servis dan aksesoris komputer, untuk memastikan ketersediaan komponen berkualitas. </p>
-                    </div>
+                        <p class="lead mb-4"> Thar'z Computer adalah sebuah UMKM di Subang, Jawa Barat, yang berdedikasi pada layanan jasa servis perangkat elektronik dan penjualan aksesoris komputer. Sebagai bagian dari komitmen untuk terus meningkatkan kualitas layanan, kami kini mengembangkan sistem tracking servis berbasis web yang dirancang untuk memberikan kemudahan dan transparansi informasi bagi pelanggan. Untuk memastikan ketersediaan komponen dan produk terbaik, kami juga telah menjalin kerja sama resmi dengan distributor terkemuka seperti V-GEN dan ROBOT.
                 </div>
             </div>
         </section>

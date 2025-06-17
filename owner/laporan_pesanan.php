@@ -70,7 +70,6 @@ $koneksi->close();
 <body class="bg-gray-100 text-gray-900 font-sans antialiased">
 
     <div class="flex min-h-screen">
-
         <div class="w-64 bg-gray-800 shadow-lg flex flex-col justify-between py-6">
             <div>
                 <div class="flex flex-col items-center mb-10">
@@ -78,61 +77,18 @@ $koneksi->close();
                     <h1 class="text-2xl font-extrabold text-white text-center">Thar'z Computer</h1>
                     <p class="text-sm text-gray-400">Owner Panel</p>
                 </div>
-
                 <ul class="px-6 space-y-3">
-                    <li>
-                        <a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <i class="fas fa-home w-6 text-center"></i>
-                            <span class="font-medium">Dashboard</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="register.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                           <i class="fas fa-users w-6 text-center"></i>
-                            <span class="font-medium">Kelola Akun</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="stok.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <i class="fas fa-wrench w-6 text-center"></i>
-                            <span class="font-medium">Kelola Sparepart</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="kelola_kategori.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <i class="fas fa-tags w-6 text-center"></i>
-                            <span class="font-medium">Kelola Kategori</span>
-                        </a>
-                    </li>
-                     <li>
-                        <a href="kelola_jasa.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <i class="fas fa-concierge-bell w-6 text-center"></i>
-                            <span class="font-medium">Kelola Jasa</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="laporan_keuangan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                               <i class="fas fa-chart-line w-6 text-center"></i>
-                            <span class="font-medium">Laporan Keuangan</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="laporan_sparepart.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                               <i class="fas fa-boxes w-6 text-center"></i>
-                            <span class="font-medium">Laporan Stok Barang</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="laporan_pesanan.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200">
-                               <i class="fas fa-clipboard-list w-6 text-center"></i>
-                            <span class="font-medium">Laporan Pesanan</span>
-                        </a>
-                    </li>
+                    <li><a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200"><i class="fas fa-home w-6 text-center"></i><span class="font-medium">Dashboard</span></a></li>
+                    <li><a href="register.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200"><i class="fas fa-users w-6 text-center"></i><span class="font-medium">Kelola Akun</span></a></li>
+                    <li><a href="stok.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200"><i class="fas fa-wrench w-6 text-center"></i><span class="font-medium">Kelola Sparepart</span></a></li>
+                    <li><a href="kelola_kategori.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200"><i class="fas fa-tags w-6 text-center"></i><span class="font-medium">Kelola Kategori</span></a></li>
+                    <li><a href="kelola_jasa.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200"><i class="fas fa-concierge-bell w-6 text-center"></i><span class="font-medium">Kelola Jasa</span></a></li>
+                    <li><a href="laporan_keuangan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200"><i class="fas fa-chart-line w-6 text-center"></i><span class="font-medium">Laporan Keuangan</span></a></li>
+                    <li><a href="laporan_sparepart.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200"><i class="fas fa-boxes w-6 text-center"></i><span class="font-medium">Laporan Stok Barang</span></a></li>
+                    <li><a href="laporan_pesanan.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200"><i class="fas fa-clipboard-list w-6 text-center"></i><span class="font-medium">Laporan Pesanan</span></a></li>
                 </ul>
             </div>
-            <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
-                &copy; Thar'z Computer 2025
-            </div>
+            <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">&copy; Thar'z Computer 2025</div>
         </div>
 
         <div class="flex-1 flex flex-col">
@@ -142,8 +98,7 @@ $koneksi->close();
                 <div class="flex items-center space-x-3">
                     <i class="fas fa-user-circle text-xl text-gray-600"></i>
                     <span class="text-lg font-semibold text-gray-700"><?php echo htmlspecialchars($namaAkun); ?></span>
-                    <a href="../logout.php" class="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 text-sm font-medium">
-                        <i class="fas fa-sign-out-alt mr-1"></i>Logout</a>
+                    <a href="../logout.php" class="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200 text-sm font-medium"><i class="fas fa-sign-out-alt mr-1"></i>Logout</a>
                 </div>
             </div>
 
@@ -157,10 +112,15 @@ $koneksi->close();
                                 <label for="status_filter" class="block text-sm font-medium text-gray-700">Status Servis</label>
                                 <select id="status_filter" name="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                     <option value="Semua" <?php echo ($filter_status == 'Semua' || $filter_status == '' ? 'selected' : ''); ?>>Semua</option>
-                                    <option value="Dalam Proses" <?php echo ($filter_status == 'Dalam Proses' ? 'selected' : ''); ?>>Dalam Proses</option>
-                                    <option value="Menunggu Sparepart" <?php echo ($filter_status == 'Menunggu Sparepart' ? 'selected' : ''); ?>>Menunggu Sparepart</option>
-                                    <option value="Selesai" <?php echo ($filter_status == 'Selesai' ? 'selected' : ''); ?>>Selesai</option>
-                                    <option value="Dibatalkan" <?php echo ($filter_status == 'Dibatalkan' ? 'selected' : ''); ?>>Dibatalkan</option>
+                                    <option value="diajukan" <?php echo ($filter_status == 'diajukan' ? 'selected' : ''); ?>>Diajukan</option>
+                                    <option value="dikonfirmasi" <?php echo ($filter_status == 'dikonfirmasi' ? 'selected' : ''); ?>>Dikonfirmasi</option>
+                                    <option value="menunggu sparepart" <?php echo ($filter_status == 'menunggu sparepart' ? 'selected' : ''); ?>>Menunggu Sparepart</option>
+                                    <option value="diperbaiki" <?php echo ($filter_status == 'diperbaiki' ? 'selected' : ''); ?>>Diperbaiki</option>
+                                    <option value="selesai" <?php echo ($filter_status == 'selesai' ? 'selected' : ''); ?>>Selesai</option>
+                                    <option value="dibatalkan" <?php echo ($filter_status == 'dibatalkan' ? 'selected' : ''); ?>>Dibatalkan</option>
+                                    <option value="siap diambil" <?php echo ($filter_status == 'siap diambil' ? 'selected' : ''); ?>>Siap Diambil</option>
+                                    <option value="sudah diambil" <?php echo ($filter_status == 'sudah diambil' ? 'selected' : ''); ?>>Sudah Diambil</option>
+                                    <option value="menunggu konfirmasi" <?php echo ($filter_status == 'menunggu konfirmasi' ? 'selected' : ''); ?>>Menunggu Konfirmasi</option>
                                 </select>
                             </div>
                             <div>
@@ -211,20 +171,28 @@ $koneksi->close();
                                             <?php
                                                 $statusClass = '';
                                                 switch ($service['status']) {
-                                                    case 'Dalam Proses':
+                                                    case 'diajukan':
+                                                        $statusClass = 'bg-blue-100 text-blue-800'; break;
+                                                    case 'menunggu konfirmasi':
+                                                        $statusClass = 'bg-cyan-100 text-cyan-800'; break;
+                                                    case 'dikonfirmasi':
+                                                    case 'diperbaiki':
                                                         $statusClass = 'bg-yellow-100 text-yellow-800'; break;
-                                                    case 'Menunggu Sparepart':
+                                                    case 'menunggu sparepart':
                                                         $statusClass = 'bg-purple-100 text-purple-800'; break;
-                                                    case 'Selesai':
+                                                    case 'selesai':
+                                                    case 'siap diambil':
                                                         $statusClass = 'bg-green-100 text-green-800'; break;
-                                                    case 'Dibatalkan':
+                                                    case 'sudah diambil':
+                                                        $statusClass = 'bg-gray-200 text-gray-800'; break;
+                                                    case 'dibatalkan':
                                                         $statusClass = 'bg-red-100 text-red-800'; break;
                                                     default:
                                                         $statusClass = 'bg-gray-100 text-gray-800'; break;
                                                 }
                                             ?>
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $statusClass; ?>">
-                                                <?php echo htmlspecialchars($service['status']); ?>
+                                                <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $service['status']))); ?>
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600"><?php echo date('d M Y', strtotime($service['tanggal'])); ?></td>
@@ -252,6 +220,7 @@ $koneksi->close();
     </div>
 
     <script>
+        // Kode Javascript tidak perlu diubah
         document.addEventListener('DOMContentLoaded', function() {
             const rowsPerPage = 9;
             const tableBody = document.getElementById('pesanan-tbody');
@@ -260,7 +229,6 @@ $koneksi->close();
             const allRows = Array.from(tableBody.querySelectorAll('tr'));
             const totalRows = allRows.length;
             
-            // Cek jika barisnya hanya berisi pesan "tidak ada data"
             if (totalRows === 1 && allRows[0].querySelectorAll('td').length === 1) {
                 return;
             }
@@ -278,7 +246,7 @@ $koneksi->close();
                 const startIndex = (page - 1) * rowsPerPage;
                 const endIndex = startIndex + rowsPerPage;
                 const pageRows = allRows.slice(startIndex, endIndex);
-                pageRows.forEach(row => row.style.display = ''); // Mengembalikan ke display default (table-row)
+                pageRows.forEach(row => row.style.display = ''); 
             }
 
             function updatePaginationControls() {
