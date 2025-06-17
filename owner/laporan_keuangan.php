@@ -12,46 +12,33 @@ $end_date = isset($_GET['end_date']) ? $_GET['end_date'] : '';
 
 // --- Ambil data keuangan dari database ---
 $totalPendapatan = 0;
-$dataTransaksi = []; // Bisa berupa pendapatan atau pengeluaran
-$dataPendapatanHarian = []; // Data untuk grafik
+$dataTransaksi = [];
+$dataPendapatanHarian = [];
 
-$where_clause = "WHERE s.status = 'Selesai'";
+// Siapkan filter WHERE
+$where_clause = "WHERE t.status = 'lunas'";
 if ($start_date && $end_date) {
-    // Pastikan format tanggal aman untuk query
     $start_date_safe = $koneksi->real_escape_string($start_date);
     $end_date_safe = $koneksi->real_escape_string($end_date);
-    $where_clause .= " AND DATE(s.tanggal_selesai) BETWEEN '$start_date_safe' AND '$end_date_safe'";
+    $where_clause .= " AND DATE(t.tanggal) BETWEEN '$start_date_safe' AND '$end_date_safe'";
 } elseif ($start_date) {
     $start_date_safe = $koneksi->real_escape_string($start_date);
-    $where_clause .= " AND DATE(s.tanggal_selesai) >= '$start_date_safe'";
+    $where_clause .= " AND DATE(t.tanggal) >= '$start_date_safe'";
 } elseif ($end_date) {
     $end_date_safe = $koneksi->real_escape_string($end_date);
-    $where_clause .= " AND DATE(s.tanggal_selesai) <= '$end_date_safe'";
+    $where_clause .= " AND DATE(t.tanggal) <= '$end_date_safe'";
 }
 
-// Query untuk total pendapatan
-$sqlPendapatan = "SELECT SUM(estimasi_harga) AS total_pendapatan FROM service s $where_clause";
+// Query total pendapatan
+$sqlPendapatan = "SELECT SUM(total) AS total_pendapatan FROM transaksi t $where_clause";
 $resultPendapatan = $koneksi->query($sqlPendapatan);
 if ($resultPendapatan && $resultPendapatan->num_rows > 0) {
     $row = $resultPendapatan->fetch_assoc();
     $totalPendapatan = $row['total_pendapatan'];
 }
 
-// Query untuk detail transaksi (servis selesai sebagai pendapatan)
-$sqlTransaksi = "SELECT
-                     s.id_service AS id_transaksi,
-                     c.nama_customer AS deskripsi,
-                     s.estimasi_harga AS jumlah,
-                     s.tanggal_selesai AS tanggal_transaksi,
-                     'Pendapatan Servis' AS jenis_transaksi
-                   FROM
-                     service s
-                   JOIN
-                     customer c ON s.id_customer = c.id_customer
-                   $where_clause
-                   ORDER BY
-                     s.tanggal_selesai DESC"; // Order by DESC untuk menampilkan transaksi terbaru di atas
-
+// Query detail transaksi
+$sqlTransaksi = "SELECT t.id_transaksi, t.jenis AS jenis_transaksi, t.total AS jumlah, t.tanggal AS tanggal_transaksi, c.nama_customer AS deskripsi FROM transaksi t JOIN customer c ON t.id_customer = c.id_customer $where_clause ORDER BY t.tanggal DESC";
 $resultTransaksi = $koneksi->query($sqlTransaksi);
 if ($resultTransaksi && $resultTransaksi->num_rows > 0) {
     while ($row = $resultTransaksi->fetch_assoc()) {
@@ -220,7 +207,7 @@ $koneksi->close();
                                 <tr>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis Transaksi</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Customer</th>
                                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
                                 </tr>
                             </thead>
@@ -241,7 +228,7 @@ $koneksi->close();
                                                 </span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                Servis untuk <?php echo htmlspecialchars($transaksi['deskripsi']); ?>
+                                                <?php echo htmlspecialchars($transaksi['deskripsi']); ?>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
                                                 Rp <?php echo number_format($transaksi['jumlah'], 0, ',', '.'); ?>

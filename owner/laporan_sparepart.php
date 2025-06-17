@@ -13,6 +13,10 @@ if (isset($_GET['search_nama'])) {
     $search_nama = $_GET['search_nama'];
 }
 
+// --- Inisialisasi filter tanggal ---
+$tanggal_dari = isset($_GET['tanggal_dari']) ? $_GET['tanggal_dari'] : '';
+$tanggal_sampai = isset($_GET['tanggal_sampai']) ? $_GET['tanggal_sampai'] : '';
+
 // --- Ambil data stok barang dari database (dari tabel 'stok') ---
 $dataStokBarang = [];
 
@@ -50,7 +54,44 @@ if ($resultStokBarang && $resultStokBarang->num_rows > 0) {
 }
 
 $stmt->close(); // Tutup statement setelah digunakan
+
+// Ambil data pengeluaran service
+$penggunaanService = [];
+$sqlService = "SELECT ds.id_barang, COUNT(ds.id_barang) as jumlah FROM detail_service ds JOIN service s ON ds.id_service = s.id_service WHERE ds.id_barang IS NOT NULL";
+if ($tanggal_dari != '' && $tanggal_sampai != '') {
+    $sqlService .= " AND DATE(s.tanggal) BETWEEN '" . $koneksi->real_escape_string($tanggal_dari) . "' AND '" . $koneksi->real_escape_string($tanggal_sampai) . "'";
+}
+$sqlService .= " GROUP BY ds.id_barang";
+$resultService = $koneksi->query($sqlService);
+while($row = $resultService->fetch_assoc()) {
+    $penggunaanService[$row['id_barang']] = (int)$row['jumlah'];
+}
+
+// Ambil data pengeluaran penjualan
+$penjualanBarang = [];
+$sqlPenjualan = "SELECT dt.id_barang, SUM(dt.jumlah) as jumlah FROM detail_transaksi dt JOIN transaksi t ON dt.id_transaksi = t.id_transaksi WHERE dt.id_barang IS NOT NULL";
+if ($tanggal_dari != '' && $tanggal_sampai != '') {
+    $sqlPenjualan .= " AND DATE(t.tanggal) BETWEEN '" . $koneksi->real_escape_string($tanggal_dari) . "' AND '" . $koneksi->real_escape_string($tanggal_sampai) . "'";
+}
+$sqlPenjualan .= " GROUP BY dt.id_barang";
+$resultPenjualan = $koneksi->query($sqlPenjualan);
+while($row = $resultPenjualan->fetch_assoc()) {
+    $penjualanBarang[$row['id_barang']] = (int)$row['jumlah'];
+}
 $koneksi->close();
+
+// Gabungkan semua nama barang dari kedua sumber
+$allNamaBarang = array_unique(array_merge(array_keys($penggunaanService), array_keys($penjualanBarang)));
+
+// Siapkan data untuk grafik
+$labels = [];
+$serviceValues = [];
+$penjualanValues = [];
+foreach ($allNamaBarang as $nama) {
+    $labels[] = $nama;
+    $serviceValues[] = isset($penggunaanService[$nama]) ? $penggunaanService[$nama] : 0;
+    $penjualanValues[] = isset($penjualanBarang[$nama]) ? $penjualanBarang[$nama] : 0;
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -60,6 +101,7 @@ $koneksi->close();
     <title>Laporan Stok Barang - Thraz Computer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-900 font-sans antialiased">
 
@@ -145,8 +187,16 @@ $koneksi->close();
                 <div class="bg-white p-6 rounded-lg shadow-md mb-8">
                     <h3 class="text-xl font-semibold text-gray-800 mb-4">Filter Laporan Stok</h3>
                     <form method="GET" action="laporan_sparepart.php">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                            <div class="md:col-span-2">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                            <div class="md:col-span-1">
+                                <label for="tanggal_dari" class="block text-sm font-medium text-gray-700">Dari Tanggal</label>
+                                <input type="date" id="tanggal_dari" name="tanggal_dari" value="<?php echo htmlspecialchars($tanggal_dari); ?>" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label for="tanggal_sampai" class="block text-sm font-medium text-gray-700">Sampai Tanggal</label>
+                                <input type="date" id="tanggal_sampai" name="tanggal_sampai" value="<?php echo htmlspecialchars($tanggal_sampai); ?>" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            </div>
+                            <div class="md:col-span-1">
                                 <label for="search_nama" class="block text-sm font-medium text-gray-700">Cari Nama Barang</label>
                                 <div class="relative mt-1">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -155,12 +205,25 @@ $koneksi->close();
                                     <input type="text" id="search_nama" name="search_nama" value="<?php echo htmlspecialchars($search_nama); ?>" placeholder="Ketik nama barang..." class="block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 </div>
                             </div>
-                            <div class="flex space-x-3">
+                            <div class="flex space-x-3 mt-4 md:mt-0">
                                 <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Filter</button>
                                 <a href="laporan_sparepart.php" class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Reset</a>
                             </div>
+                            <div>
+                                <a href="laporan_keuangan_cetak.php?start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" target="_blank"
+                                   class="w-full inline-flex justify-center items-center py-2 px-4 border border-green-500 shadow-sm text-sm font-medium rounded-md text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                   <i class="fas fa-print mr-2"></i>Cetak Laporan
+                                </a>
+                            </div>
                         </div>
                     </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Grafik Penggunaan & Penjualan Sparepart</h3>
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <canvas id="sparepartChart"></canvas>
+                    </div>
                 </div>
 
                 <div class="bg-white p-6 rounded-lg shadow-md">
@@ -173,16 +236,47 @@ $koneksi->close();
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Barang</th>
                                     <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Stok Tersedia</th>
-                                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Harga</th>
+                                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Pengeluaran Service (Unit)</th>
+                                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Pengeluaran Penjualan (Unit)</th>
+                                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Pengeluaran (Unit)</th>
                                 </tr>
                             </thead>
                             <tbody id="laporan-stok-tbody" class="bg-white divide-y divide-gray-200">
                                 <?php if (empty($dataStokBarang)): ?>
                                     <tr>
-                                        <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data barang yang cocok dengan pencarian.</td>
+                                        <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data barang yang cocok dengan pencarian.</td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php foreach ($dataStokBarang as $barang): ?>
+                                    <?php
+                                    // Siapkan array untuk diurutkan berdasarkan total pengeluaran
+                                    $tabelData = [];
+                                    foreach ($dataStokBarang as $barang) {
+                                        $id_barang = $barang['id_barang'];
+                                        $harga = $barang['harga'];
+                                        $jml_service = isset($penggunaanService[$id_barang]) ? $penggunaanService[$id_barang] : 0;
+                                        $jml_penjualan = isset($penjualanBarang[$id_barang]) ? $penjualanBarang[$id_barang] : 0;
+                                        $total_pengeluaran = $jml_service + $jml_penjualan;
+                                        $tabelData[] = [
+                                            'barang' => $barang,
+                                            'jml_service' => $jml_service,
+                                            'jml_penjualan' => $jml_penjualan,
+                                            'total_pengeluaran' => $total_pengeluaran
+                                        ];
+                                    }
+                                    // Urutkan dari total_pengeluaran terbanyak ke terkecil
+                                    usort($tabelData, function($a, $b) {
+                                        return $b['total_pengeluaran'] <=> $a['total_pengeluaran'];
+                                    });
+                                    ?>
+                                    <?php foreach ($tabelData as $row): ?>
+                                    <?php
+                                        $barang = $row['barang'];
+                                        $jml_service = $row['jml_service'];
+                                        $jml_penjualan = $row['jml_penjualan'];
+                                        $total_pengeluaran = $row['total_pengeluaran'];
+                                        $id_barang = $barang['id_barang'];
+                                        $harga = $barang['harga'];
+                                    ?>
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($barang['id_barang']); ?></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?php echo htmlspecialchars($barang['nama_barang']); ?></td>
@@ -202,7 +296,9 @@ $koneksi->close();
                                                 <?php echo htmlspecialchars($stok); ?>
                                             </span>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-right">Rp <?php echo number_format($barang['harga'], 0, ',', '.'); ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-right"><?php echo $jml_service; ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-right"><?php echo $jml_penjualan; ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-right font-bold"><?php echo $total_pengeluaran; ?></td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
@@ -286,6 +382,46 @@ $koneksi->close();
                 displayPage(1);
                 updatePaginationControls();
             }
+
+            // Data untuk grafik gabungan
+            const labels = <?php echo json_encode($labels); ?>;
+            const serviceValues = <?php echo json_encode($serviceValues); ?>;
+            const penjualanValues = <?php echo json_encode($penjualanValues); ?>;
+
+            const ctx = document.getElementById('sparepartChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Penggunaan dalam Service',
+                            data: serviceValues,
+                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Penjualan',
+                            data: penjualanValues,
+                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
         });
     </script>
 </body>

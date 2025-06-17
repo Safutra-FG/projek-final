@@ -3,12 +3,6 @@
 include '../koneksi.php'; // Pastikan file koneksi.php ada dan benar
 
 session_start();
-// Logika otentikasi sederhana (opsional, untuk produksi gunakan yang lebih kuat)
-// Jika Anda memiliki sistem role-based access, pastikan user_role adalah 'owner'
-// if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'owner') {
-//     header("Location: ../login.php");
-//     exit();
-// }
 $namaAkun = "Owner"; // Mengatur nama akun sebagai Owner
 
 
@@ -54,7 +48,7 @@ if ($resultSelesaiHariIni && $resultSelesaiHariIni->num_rows > 0) {
 }
 
 // Query untuk estimasi pendapatan hari ini
-$sqlEstimasiPendapatanHariIni = "SELECT SUM(estimasi_harga) AS total_estimasi_pendapatan FROM service WHERE status = 'Selesai' AND DATE(tanggal_selesai) = '$today'";
+$sqlEstimasiPendapatanHariIni = "SELECT SUM(estimasi_harga) AS total_estimasi_pendapatan FROM service WHERE status = 'selesai' || status = 'sudah diambil' || status = 'siap diambil' AND DATE(tanggal_selesai) = '$today'";
 $resultEstimasiPendapatanHariIni = $koneksi->query($sqlEstimasiPendapatanHariIni);
 if ($resultEstimasiPendapatanHariIni && $resultEstimasiPendapatanHariIni->num_rows > 0) {
     $row = $resultEstimasiPendapatanHariIni->fetch_assoc();

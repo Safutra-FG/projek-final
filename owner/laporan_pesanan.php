@@ -66,6 +66,7 @@ $koneksi->close();
     <title>Laporan Pesanan - Thraz Computer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-900 font-sans antialiased">
 
@@ -135,8 +136,26 @@ $koneksi->close();
                                 <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Filter</button>
                                 <a href="laporan_pesanan.php" class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Reset</a>
                             </div>
+                            <div>
+                                <a href="laporan_keuangan_cetak.php?start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" target="_blank"
+                                   class="w-full inline-flex justify-center items-center py-2 px-4 border border-green-500 shadow-sm text-sm font-medium rounded-md text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                   <i class="fas fa-print mr-2"></i>Cetak Laporan
+                                </a>
+                            </div>
                         </div>
                     </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Statistik Servis</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="bg-white p-6 rounded-lg shadow-md">
@@ -280,6 +299,102 @@ $koneksi->close();
                 displayPage(1);
                 updatePaginationControls();
             }
+
+            // Data untuk grafik
+            const serviceData = <?php 
+                $statusCounts = [];
+                $monthlyCounts = [];
+                
+                foreach ($dataSemuaServis as $service) {
+                    // Hitung status
+                    $status = $service['status'];
+                    if (!isset($statusCounts[$status])) {
+                        $statusCounts[$status] = 0;
+                    }
+                    $statusCounts[$status]++;
+                    
+                    // Hitung per bulan
+                    $month = date('M Y', strtotime($service['tanggal']));
+                    if (!isset($monthlyCounts[$month])) {
+                        $monthlyCounts[$month] = 0;
+                    }
+                    $monthlyCounts[$month]++;
+                }
+                
+                echo json_encode([
+                    'status' => $statusCounts,
+                    'monthly' => $monthlyCounts
+                ]);
+            ?>;
+
+            // Grafik Status
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            new Chart(statusCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(serviceData.status),
+                    datasets: [{
+                        data: Object.values(serviceData.status),
+                        backgroundColor: [
+                            '#3B82F6', // blue
+                            '#10B981', // green
+                            '#F59E0B', // yellow
+                            '#EF4444', // red
+                            '#8B5CF6', // purple
+                            '#EC4899', // pink
+                            '#6B7280', // gray
+                            '#14B8A6', // teal
+                            '#F97316'  // orange
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Distribusi Status Servis'
+                        }
+                    }
+                }
+            });
+
+            // Grafik Bulanan
+            const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+            new Chart(monthlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(serviceData.monthly),
+                    datasets: [{
+                        label: 'Jumlah Servis',
+                        data: Object.values(serviceData.monthly),
+                        backgroundColor: '#3B82F6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Jumlah Servis per Bulan'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
         });
     </script>
 </body>
