@@ -24,7 +24,7 @@ $sql = "SELECT
             status
         FROM
             service
-        ORDER BY tanggal DESC";
+        ORDER BY tanggal asc";
 
 $result = $koneksi->query($sql);
 
