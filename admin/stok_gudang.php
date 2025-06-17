@@ -4,7 +4,17 @@ include 'auth.php';
 
 $namaAkun = getNamaUser();
 
+// Konfigurasi pagination
+$items_per_page = 7;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($page - 1) * $items_per_page;
 
+// Hitung total data
+$total_query = "SELECT COUNT(*) as total FROM stok";
+$total_result = $koneksi->query($total_query);
+$total_row = $total_result->fetch_assoc();
+$total_items = $total_row['total'];
+$total_pages = ceil($total_items / $items_per_page);
 
 // Cek kalau form dikirim
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_stok'])) {
@@ -26,10 +36,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_stok'])) {
         }
         $stmt->close();
         // Redirect untuk mencegah form resubmission saat refresh
-        header("Location: stok_gudang.php?status=success");
+        header("Location: stok_gudang.php?page=" . $page . "&status=success");
         exit();
     }
 }
+
+// Query untuk mengambil data dengan limit
+$sql = "SELECT id_barang, nama_barang, stok, harga FROM stok ORDER BY id_barang DESC LIMIT ? OFFSET ? ";
+$stmt = $koneksi->prepare($sql);
+$stmt->bind_param("ii", $items_per_page, $offset);
+$stmt->execute();
+$result = $stmt->get_result();
 ?>
 
 <!DOCTYPE html>
@@ -137,33 +154,48 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_stok'])) {
                                     <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center w-stok">Stok</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200"> <?php
-                                                                                $sql = "SELECT id_barang, nama_barang, stok, harga FROM stok";
-                                                                                $result = $koneksi->query($sql);
-
-                                                                                if ($result->num_rows > 0) {
-                                                                                    while ($row = $result->fetch_assoc()) {
-                                                                                        echo "<tr>";
-                                                                                        echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900 td-left'>" . htmlspecialchars($row["id_barang"]) . "</td>";
-                                                                                        echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900 td-left'>" . htmlspecialchars($row["nama_barang"]) . "</td>";
-                                                                                        echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900 td-left'>Rp " . number_format(htmlspecialchars($row["harga"]), 0, ',', '.') . "</td>";
-                                                                                        echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900 td-center'>"; // Menggunakan td-center
-                                                                                ?>
-                                        <form method="POST" class="flex items-center justify-center space-x-2">
-                                            <input type="hidden" name="id_barang" value="<?php echo htmlspecialchars($row['id_barang']); ?>">
-                                            <input type="number" name="stok" value="<?php echo htmlspecialchars($row['stok']); ?>" min="0" class="w-20 px-2 py-1 border rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                                            <button type="submit" name="update_stok" class="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition duration-200 shadow-sm">Update</button>
-                                        </form>
-                                <?php
-                                                                                        echo "</td>";
-                                                                                        echo "</tr>";
-                                                                                    }
-                                                                                } else {
-                                                                                    echo "<tr><td colspan='4' class='px-6 py-4 text-center text-sm text-gray-500'>Belum ada data stok barang.</td></tr>";
-                                                                                }
-                                ?>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <?php if ($result->num_rows > 0) : ?>
+                                    <?php while ($row = $result->fetch_assoc()) : ?>
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 td-left"><?php echo htmlspecialchars($row["id_barang"]); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 td-left"><?php echo htmlspecialchars($row["nama_barang"]); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 td-left">Rp <?php echo number_format(htmlspecialchars($row["harga"]), 0, ',', '.'); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 td-center">
+                                                <form method="POST" class="flex items-center justify-center space-x-2">
+                                                    <input type="hidden" name="id_barang" value="<?php echo htmlspecialchars($row['id_barang']); ?>">
+                                                    <input type="number" name="stok" value="<?php echo htmlspecialchars($row['stok']); ?>" min="0" class="w-20 px-2 py-1 border rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                                    <button type="submit" name="update_stok" class="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition duration-200 shadow-sm">Update</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                <?php else : ?>
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada data stok barang.</td>
+                                    </tr>
+                                <?php endif; ?>
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="mt-4 flex justify-center">
+                        <div class="flex space-x-2">
+                            <?php if ($page > 1) : ?>
+                                <a href="?page=<?php echo $page - 1; ?>" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">&laquo; Sebelumnya</a>
+                            <?php endif; ?>
+
+                            <?php for ($i = 1; $i <= $total_pages; $i++) : ?>
+                                <a href="?page=<?php echo $i; ?>" class="px-3 py-1 <?php echo $i === $page ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'; ?> rounded-md transition duration-200">
+                                    <?php echo $i; ?>
+                                </a>
+                            <?php endfor; ?>
+
+                            <?php if ($page < $total_pages) : ?>
+                                <a href="?page=<?php echo $page + 1; ?>" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">Selanjutnya &raquo;</a>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             </div>

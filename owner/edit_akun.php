@@ -1,7 +1,6 @@
 <?php
 session_start();
-// Harusnya menggunakan koneksi dari file terpusat, tapi kita pertahankan logika aslinya
-$koneksi = new mysqli("localhost", "root", "", "tharz_computer");
+include '../koneksi.php';
 
 // Cek role harus owner
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'owner') {

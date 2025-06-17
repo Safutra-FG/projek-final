@@ -3,11 +3,6 @@
 include '../koneksi.php'; // Pastikan file koneksi.php ada dan benar
 
 session_start();
-// Logika otentikasi sederhana (opsional, untuk produksi gunakan yang lebih kuat)
-// if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'owner') {
-//     header("Location: ../login.php");
-//     exit();
-// }
 
 $namaAkun = "Owner";
 

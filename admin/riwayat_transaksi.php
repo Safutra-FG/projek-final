@@ -4,10 +4,13 @@ include 'auth.php';
 
 $namaAkun = getNamaUser();
 
-
 // Logika untuk filtering bulan (jika ada) akan tetap di sini
 $bulan_filter = $_GET['bulan'] ?? date('Y-m'); // Default bulan saat ini (YYYY-MM)
 
+// Konfigurasi pagination
+$items_per_page = 7;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($page - 1) * $items_per_page;
 
 $sql_transaksi = "
     WITH RankedTransaksi AS (
@@ -39,29 +42,43 @@ $sql_transaksi = "
             customer c ON t.id_customer = c.id_customer
         WHERE
             DATE_FORMAT(t.tanggal, '%Y-%m') = ?
+    ),
+    FilteredTransaksi AS (
+        SELECT
+            id_transaksi,
+            nama_customer,
+            tanggal_transaksi,
+            jenis_transaksi,
+            total_harga,
+            status_transaksi
+        FROM
+            RankedTransaksi
+        WHERE
+            rn = 1
     )
-    -- Langkah terakhir: Pilih HANYA baris yang memiliki peringkat 1
-    SELECT
-        id_transaksi,
-        nama_customer,
-        tanggal_transaksi,
-        jenis_transaksi,
-        total_harga,
-        status_transaksi
-    FROM
-        RankedTransaksi
-    WHERE
-        rn = 1
+    SELECT 
+        SQL_CALC_FOUND_ROWS
+        *
+    FROM 
+        FilteredTransaksi
     ORDER BY
-        tanggal_transaksi DESC;
+        tanggal_transaksi DESC
+    LIMIT ? OFFSET ?;
 ";
 
 $stmt_transaksi = $koneksi->prepare($sql_transaksi);
 
 if ($stmt_transaksi) {
-    $stmt_transaksi->bind_param("s", $bulan_filter);
+    $stmt_transaksi->bind_param("sii", $bulan_filter, $items_per_page, $offset);
     $stmt_transaksi->execute();
     $result_transaksi = $stmt_transaksi->get_result();
+    
+    // Hitung total data
+    $total_result = $koneksi->query("SELECT FOUND_ROWS() as total");
+    $total_row = $total_result->fetch_assoc();
+    $total_items = $total_row['total'];
+    $total_pages = ceil($total_items / $items_per_page);
+    
     $stmt_transaksi->close();
 } else {
     die("Prepare statement gagal untuk transaksi: " . $koneksi->error);
@@ -168,11 +185,30 @@ $koneksi->close(); // Tutup koneksi setelah semua data diambil
                                     <?php endwhile; ?>
                                 <?php else : ?>
                                     <tr>
-                                        <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada riwayat transaksi untuk bulan ini.</td>
+                                        <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada riwayat transaksi untuk bulan ini.</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="mt-4 flex justify-center">
+                        <div class="flex space-x-2">
+                            <?php if ($page > 1) : ?>
+                                <a href="?page=<?php echo $page - 1; ?>&bulan=<?php echo urlencode($bulan_filter); ?>" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">&laquo; Sebelumnya</a>
+                            <?php endif; ?>
+
+                            <?php for ($i = 1; $i <= $total_pages; $i++) : ?>
+                                <a href="?page=<?php echo $i; ?>&bulan=<?php echo urlencode($bulan_filter); ?>" class="px-3 py-1 <?php echo $i === $page ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'; ?> rounded-md transition duration-200">
+                                    <?php echo $i; ?>
+                                </a>
+                            <?php endfor; ?>
+
+                            <?php if ($page < $total_pages) : ?>
+                                <a href="?page=<?php echo $page + 1; ?>&bulan=<?php echo urlencode($bulan_filter); ?>" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">Selanjutnya &raquo;</a>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
 

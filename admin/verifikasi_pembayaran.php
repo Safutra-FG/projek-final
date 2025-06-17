@@ -1,7 +1,5 @@
 <?php
 session_start();
-// Sesuaikan path ke file koneksi Anda
-// Jika edit_service.php ada di dalam folder admin, maka path ini mungkin sudah benar
 include '../koneksi.php'; 
 
 // Aktifkan pelaporan error untuk debugging

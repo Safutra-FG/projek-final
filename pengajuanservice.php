@@ -1,7 +1,6 @@
 <?php
 session_start();
-$koneksi = new mysqli("localhost", "root", "", "tharz_computer");
-
+include 'koneksi.php';
 // Inisialisasi variabel untuk pesan
 $message = '';
 

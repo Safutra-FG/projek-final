@@ -1,6 +1,6 @@
 <?php
 session_start();
-require '../koneksi.php'; // Menyertakan file koneksi database
+include '../koneksi.php'; // Menyertakan file koneksi database
 
 // --- OTENTIKASI & OTORISASI ---
 $namaAkun = $_SESSION['nama'] ?? 'Owner'; // Mengambil nama dari session jika ada

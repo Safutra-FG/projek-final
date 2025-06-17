@@ -1,24 +1,20 @@
 <?php
 session_start();
-
-// Pastikan file koneksi.php sudah include dan berisi inisialisasi $koneksi
-// Contoh isi koneksi.php:
-// $koneksi = new mysqli("localhost", "root", "", "tharz_computer");
-// if ($koneksi->connect_error) {
-//     die("Koneksi database gagal: " . $koneksi->connect_error);
-// }
-// mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT); // Aktifkan pelaporan error MySQLi
 include 'koneksi.php'; 
 
-// --- Konfigurasi dan Inisialisasi ---
-// Definisi status transaksi yang valid (sesuaikan dengan ENUM di DB Anda)
-// define('STATUS_MENUNGGU_PEMBAYARAN', 'menunggu pembayaran'); // Baris ini tidak lagi relevan jika kolom 'status' dihilangkan
 define('JENIS_TRANSAKSI_PENJUALAN', 'penjualan');
 
 $cart = $_SESSION['cart'] ?? []; 
-$error_checkout = null; 
-$id_transaksi_baru = null; 
-$total_belanja_final = 0; // Untuk ditampilkan di ringkasan keranjang
+$error_message = null; 
+$cart_display_items = [];
+$total_untuk_display = 0;
+$namaAkun = "Customer"; // Default account name for this page
+
+// Ambil error message dari session jika ada
+if (isset($_SESSION['error_message'])) {
+    $error_message = $_SESSION['error_message'];
+    unset($_SESSION['error_message']); // Hapus dari session setelah diambil
+}
 
 // Fungsi helper untuk mencatat error ke log file
 function log_error($message) {
@@ -33,20 +29,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = filter_var(trim($_POST['email'] ?? ''), FILTER_VALIDATE_EMAIL); // Validasi format email
 
     if (empty($nama) || empty($nohp) || !$email) {
-        $error_checkout = "Nama, No HP, dan Email wajib diisi dengan format yang benar.";
+        $error_message = "Nama, No HP, dan Email wajib diisi dengan format yang benar.";
     } elseif (empty($cart)) {
-        $error_checkout = "Keranjang belanja kosong. Silakan tambahkan barang terlebih dahulu.";
+        $error_message = "Keranjang belanja kosong. Silakan tambahkan barang terlebih dahulu.";
     } else {
+        // --- Debugging: Log cart contents ---
+        log_error("Cart contents (POST): " . json_encode($cart));
+        $item_ids = array_keys($cart);
+        log_error("Item IDs from cart (POST): " . json_encode($item_ids));
+        // --- End Debugging ---
+
         // Mulai transaksi database
         // Pastikan koneksi aktif sebelum memulai transaksi
-        if (!isset($koneksi) || $koneksi->connect_error) {
-            $koneksi = new mysqli("localhost", "root", "", "tharz_computer");
-            if ($koneksi->connect_error) {
-                log_error("Koneksi database gagal saat checkout: " . $koneksi->connect_error);
-                $error_checkout = "Gagal terhubung ke database. Mohon coba lagi.";
-            }
-        }
-
         if ($koneksi && !$koneksi->connect_error) { // Lanjutkan hanya jika koneksi berhasil
             $koneksi->begin_transaction();
 
@@ -56,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $total_belanja = 0;
 
                 $placeholders = implode(',', array_fill(0, count($cart), '?'));
-                $types = str_repeat('s', count($cart)); // 's' karena id_barang mungkin string/varchar di DB
+                $types = str_repeat('i', count($cart)); // Mengubah 's' menjadi 'i' untuk id_barang
                 $item_ids = array_keys($cart);
 
                 $sql_harga = "SELECT id_barang, nama_barang, harga, stok FROM stok WHERE id_barang IN ($placeholders) FOR UPDATE"; // FOR UPDATE untuk mengunci baris
@@ -75,6 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 while ($barang_db = $result_harga->fetch_assoc()) {
+                    // --- Debugging: Log found item ---
+                    log_error("Found item in DB (POST): " . json_encode($barang_db));
+                    // --- End Debugging ---
                     $id_b = $barang_db['id_barang'];
                     $qty_pesan = $cart[$id_b];
 
@@ -134,19 +131,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // 3. Buat Transaksi
                 $tanggal_transaksi = date('Y-m-d H:i:s');
-                // $status_awal = STATUS_MENUNGGU_PEMBAYARAN; // Baris ini tidak lagi diperlukan
                 $jenis_transaksi = JENIS_TRANSAKSI_PENJUALAN; 
 
-                // UBAH BAGIAN INI: Hapus 'status' dari query INSERT
                 $sql_insert_transaksi = "INSERT INTO transaksi (id_customer, jenis, tanggal, total, id_service) 
                                          VALUES (?, ?, ?, ?, NULL)"; // id_service NULL untuk penjualan
                 $stmt_trans = $koneksi->prepare($sql_insert_transaksi);
                 if (!$stmt_trans) {
                     throw new mysqli_sql_exception("Prepare statement insert transaksi gagal: " . $koneksi->error);
                 }
-                // UBAH BAGIAN INI: Sesuaikan parameter bind_param
-                // Awalnya: bind_param("isssd", $id_customer, $jenis_transaksi, $status_awal, $tanggal_transaksi, $total_belanja);
-                // Menjadi: (int, string, string, double) -> "issd"
                 $stmt_trans->bind_param("issd", $id_customer, $jenis_transaksi, $tanggal_transaksi, $total_belanja);
                 if (!$stmt_trans->execute()) {
                     throw new mysqli_sql_exception("Insert transaksi gagal: " . $stmt_trans->error);
@@ -194,11 +186,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (mysqli_sql_exception $e) {
                 $koneksi->rollback(); 
                 log_error("MySQL Error during checkout: " . $e->getMessage() . " - SQLSTATE: " . $e->getSqlState());
-                $error_checkout = "Terjadi masalah database saat memproses pesanan Anda. Mohon coba lagi. (Error Code: " . $e->getCode() . ")";
+                $error_message = "Terjadi masalah database saat memproses pesanan Anda. Mohon coba lagi. (Error Code: " . $e->getCode() . ")";
             } catch (Exception $e) { 
                 $koneksi->rollback(); 
                 log_error("Application Error during checkout: " . $e->getMessage());
-                $error_checkout = "Terjadi kesalahan saat memproses pesanan: " . $e->getMessage(); 
+                $error_message = "Terjadi kesalahan saat memproses pesanan: " . $e->getMessage(); 
             } finally {
                 // Tidak menutup koneksi di sini agar bisa digunakan lagi di bagian bawah script jika perlu.
                 // Koneksi akan ditutup di akhir script.
@@ -206,26 +198,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-// --- Ambil data keranjang untuk tampilan HTML (diluar blok POST) ---
-$cart_display_items = [];
-$total_untuk_display = 0;
 
+// --- Ambil data keranjang untuk tampilan HTML (diluar blok POST) ---
 if (!empty($cart)) {
     // Ambil detail barang dari database untuk tampilan
     $placeholders = implode(',', array_fill(0, count($cart), '?'));
-    $types = str_repeat('s', count($cart));
+    $types = str_repeat('i', count($cart)); // Mengubah 's' menjadi 'i' untuk id_barang
     $item_ids = array_keys($cart);
 
-    // **Perbaikan di sini:** Buat koneksi baru untuk tampilan jika belum ada atau sudah ditutup
-    if (!isset($koneksi) || $koneksi->connect_error) { // Cek jika $koneksi belum diset atau ada error koneksi
-        $koneksi = new mysqli("localhost", "root", "", "tharz_computer");
-        if ($koneksi->connect_error) {
-            log_error("Koneksi database gagal untuk tampilan keranjang: " . $koneksi->connect_error);
-            // Anda bisa menampilkan pesan error yang ramah pengguna di sini
-            $error_checkout = "Terjadi kesalahan saat memuat detail keranjang. Mohon coba lagi.";
-        }
-    }
+    // --- Debugging: Log cart contents for display ---
+    log_error("Cart contents (Display): " . json_encode($cart));
+    log_error("Item IDs from cart (Display): " . json_encode($item_ids));
+    // --- End Debugging ---
 
+    // **Perbaikan di sini:** Buat koneksi baru untuk tampilan jika belum ada atau sudah ditutup
     if ($koneksi && !$koneksi->connect_error) { // Lanjutkan hanya jika koneksi berhasil
         $stmt_display = $koneksi->prepare("SELECT id_barang, nama_barang, harga FROM stok WHERE id_barang IN ($placeholders)");
         if ($stmt_display) {
@@ -234,6 +220,9 @@ if (!empty($cart)) {
             $result_display = $stmt_display->get_result();
 
             while ($row = $result_display->fetch_assoc()) {
+                // --- Debugging: Log found item for display ---
+                log_error("Found item for display in DB: " . json_encode($row));
+                // --- End Debugging ---
                 $qty = $cart[$row['id_barang']];
                 $subtotal = $row['harga'] * $qty;
                 $total_untuk_display += $subtotal;
@@ -247,7 +236,7 @@ if (!empty($cart)) {
             $stmt_display->close();
         } else {
             log_error("Gagal menyiapkan query untuk tampilan keranjang: " . $koneksi->error);
-            $error_checkout = "Terjadi kesalahan saat memuat detail keranjang.";
+            $error_message = "Terjadi kesalahan saat memuat detail keranjang.";
         }
     }
 }
@@ -264,106 +253,185 @@ if (isset($koneksi) && !$koneksi->connect_error) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkout Pesanan - Thar'z Computer</title>
+    <title>Instruksi Pembayaran - Thar'z Computer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { display: flex; flex-direction: column; font-family: sans-serif; min-height: 100vh; background-color: #f8f9fa; }
+        .navbar { background-color: #ffffff; padding: 15px 20px; border-bottom: 1px solid #dee2e6; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); }
+        .navbar .logo-img { width: 40px; height: 40px; border-radius: 50%; margin-right: 10px; border: 2px solid #0d6efd; }
+        .navbar .nav-link { padding: 10px 15px; color: #495057; font-weight: 500; transition: background-color 0.2s, color 0.2s; border-radius: 0.25rem; display: flex; align-items: center; }
+        .navbar .nav-link.active, .navbar .nav-link:hover { background-color: #e9ecef; color: #007bff; }
+        .navbar .nav-link i { margin-right: 8px; }
+        .main-content { flex: 1; padding: 20px; display: flex; flex-direction: column; }
+        .main-header { display: flex; justify-content: center; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #dee2e6; margin-bottom: 20px; }
+        .total-tagihan-display { font-size: 1.25em; font-weight: bold; color: #dc3545; }
+        .label-summary { min-width: 140px; display: inline-block; font-weight: 500; }
+        @media (max-width: 768px) {
+            .main-header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .main-header h2 { width: 100%; text-align: center; }
+        }
+    </style>
 </head>
 
 <body>
-    <div class="container mt-5">
-        <h2 class="mb-4">Konfirmasi Pesanan Anda</h2>
 
-        <?php if (!empty($error_checkout)): ?>
-            <div class="alert alert-danger" role="alert">
-                <i class="fas fa-exclamation-triangle"></i> <?php echo htmlspecialchars($error_checkout); ?>
-                <br>
-                <a href="index.php" class="alert-link">Kembali ke Beranda</a> atau <a href="cart.php" class="alert-link">Cek Keranjang</a>
+<nav class="navbar navbar-expand-lg navbar-light">
+    </nav>
+
+<div class="main-content">
+    <div class="main-header">
+        <h2 class="h4 text-dark mb-0 text-center flex-grow-1">Instruksi Pembayaran Barang</h2>
+    </div>
+
+    <div class="flex-grow-1 p-3">
+        <?php if ($error_message): ?>
+            <div class="alert alert-danger text-center" role="alert">
+                <?php echo htmlspecialchars($error_message); ?>
             </div>
-        <?php endif; ?>
-
-        <?php if (empty($cart_display_items) && empty($error_checkout)): // Tampilkan ini hanya jika keranjang kosong dan tidak ada error umum ?>
-            <div class="alert alert-warning text-center">
+        <?php elseif (empty($cart_display_items)): ?>
+            <div class="alert alert-warning text-center" role="alert">
                 <i class="fas fa-shopping-cart"></i> Keranjang belanja Anda kosong. <a href="index.php" class="alert-link">Mulai belanja sekarang!</a>
             </div>
-        <?php elseif (!empty($cart_display_items)): ?>
-            <form method="post" action="">
-                <div class="card mb-4 shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h4 class="my-0 font-weight-normal">Informasi Kontak</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="nama" class="form-label">Nama Lengkap</label>
-                            <input type="text" name="nama" id="nama" class="form-control" value="<?= htmlspecialchars($_POST['nama'] ?? '') ?>" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="nohp" class="form-label">Nomor HP</label>
-                            <input type="tel" name="nohp" id="nohp" class="form-control" value="<?= htmlspecialchars($_POST['nohp'] ?? '') ?>" 
-                                pattern="[0-9]{12,13}" 
-                                maxlength="13" 
-                                minlength="12"
-                                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                                required>
-                            <small class="form-text text-muted">Masukkan 12-13 digit nomor telepon (hanya angka)</small>
-                        </div>
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" name="email" id="email" class="form-control" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
-                        </div>
-                    </div>
+        <?php else: ?>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light py-3">
+                    <h4 class="my-0 fw-normal">Ringkasan Pesanan</h4>
                 </div>
-
-                <div class="card mb-4 shadow-sm">
-                    <div class="card-header bg-info text-white">
-                        <h4 class="my-0 font-weight-normal">Detail Keranjang</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover">
-                                <thead>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Nama Barang</th>
+                                    <th scope="col" class="text-end">Harga Satuan</th>
+                                    <th scope="col" class="text-end">Jumlah</th>
+                                    <th scope="col" class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($cart_display_items as $item): ?>
                                     <tr>
-                                        <th scope="col">Nama Barang</th>
-                                        <th scope="col" class="text-end">Harga Satuan</th>
-                                        <th scope="col" class="text-end">Jumlah</th>
-                                        <th scope="col" class="text-end">Subtotal</th>
+                                        <td><?= htmlspecialchars($item['nama_barang']) ?></td>
+                                        <td class="text-end">Rp <?= number_format($item['harga'], 0, ',', '.') ?></td>
+                                        <td class="text-end"><?= $item['jumlah'] ?></td>
+                                        <td class="text-end">Rp <?= number_format($item['subtotal'], 0, ',', '.') ?></td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($cart_display_items as $item): ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($item['nama_barang']) ?></td>
-                                            <td class="text-end">Rp <?= number_format($item['harga'], 0, ',', '.') ?></td>
-                                            <td class="text-end"><?= $item['jumlah'] ?></td>
-                                            <td class="text-end">Rp <?= number_format($item['subtotal'], 0, ',', '.') ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td colspan="3" class="text-end"><strong>Total Belanja</strong></td>
-                                        <td class="text-end"><strong>Rp <?= number_format($total_untuk_display, 0, ',', '.') ?></strong></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                                <?php endforeach; ?>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Total Belanja</strong></td>
+                                    <td class="text-end"><strong class="total-tagihan-display">Rp <?= number_format($total_untuk_display, 0, ',', '.') ?></strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white py-3">
+                    <h4 class="my-0"><i class="bi bi-credit-card"></i> Metode Pembayaran</h4>
+                </div>
+                <div class="card-body p-lg-4">
+                    <p class="text-center lead mb-4">Silakan selesaikan pembayaran Anda melalui salah satu metode berikut:</p>
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 h-100">
+                                <h3 class="mb-3"><i class="bi bi-shop"></i> 1. Bayar Langsung di Toko</h3>
+                                <p>Anda dapat melakukan pembayaran secara tunai atau metode lain yang tersedia di toko kami dan tunjukkan halaman ini.</p>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 h-100">
+                                <h3 class="mb-3"><i class="bi bi-bank"></i> 2. Transfer Bank</h3>
+                                <p>Lakukan transfer ke salah satu rekening resmi berikut:</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mt-4">
+                        <div class="card-header bg-warning">
+                            <h4 class="alert-heading mb-0"><i class="bi bi-check-circle-fill"></i> Penting: Konfirmasi Pembayaran Anda di Sini</h4>
+                        </div>
+                        <div class="card-body">
+                            <p>Setelah melakukan pembayaran, mohon segera lakukan konfirmasi dengan mengisi formulir di bawah ini agar pesanan Anda dapat segera kami proses.</p>
+                            
+                            <form action="proses_konfirmasi_barang.php" method="POST" enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <label for="nama" class="form-label">Nama Lengkap:</label>
+                                    <input type="text" class="form-control" id="nama" name="nama" value="<?= htmlspecialchars($_POST['nama'] ?? '') ?>" placeholder="Contoh: Budi Santoso" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="nohp" class="form-label">Nomor HP:</label>
+                                    <input type="tel" class="form-control" id="nohp" name="nohp" value="<?= htmlspecialchars($_POST['nohp'] ?? '') ?>" 
+                                        pattern="[0-9]{12,13}" 
+                                        maxlength="13" 
+                                        minlength="12"
+                                        oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                        placeholder="Contoh: 081234567890" required>
+                                    <div class="form-text">Masukkan 12-13 digit nomor telepon (hanya angka)</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email:</label>
+                                    <input type="email" class="form-control" id="email" name="email" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" placeholder="Contoh: budi@email.com" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="metode_transfer" class="form-label">Metode Pembayaran:</label>
+                                    <select class="form-select" id="metode_transfer" name="metode_transfer" required>
+                                        <option value="" disabled selected>-- Pilih Metode Pembayaran --</option>
+                                        <option value="cash">Cash di Toko</option>
+                                        <option value="transfer">Transfer Bank</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="nama_pengirim" class="form-label">Nama Pemilik Rekening Pengirim:</label>
+                                    <input type="text" class="form-control" id="nama_pengirim" name="nama_pengirim" placeholder="Contoh: Budi Santoso" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="bukti_pembayaran" class="form-label">Unggah Bukti Transfer:</label>
+                                    <input class="form-control" type="file" id="bukti_pembayaran" name="bukti_pembayaran" accept="image/jpeg, image/png, application/pdf" required>
+                                    <div class="form-text">Format file yang diizinkan: JPG, PNG, atau PDF. Ukuran maks: 5MB.</div>
+                                </div>
+                                
+                                <div class="d-grid">
+                                    <button type="submit" name="submit_konfirmasi" class="btn btn-success btn-lg">
+                                        <i class="bi bi-send-check"></i> Kirim Konfirmasi Pembayaran
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-success btn-lg">
-                        <i class="fas fa-money-check-alt"></i> Selesaikan Pesanan
-                    </button>
-                    <a href="barang.php" class="btn btn-outline-secondary btn-lg">
-                        <i class="fas fa-arrow-left"></i> Kembali ke Keranjang
-                    </a>
-                </div>
-            </form>
+            <div class="text-center mt-4 py-4 border-top">
+                <a href="index.php" class="btn btn-outline-secondary btn-lg ms-2"><i class="bi bi-house"></i> Kembali ke Beranda</a>
+                <a href="barang.php" class="btn btn-outline-primary btn-lg ms-2"><i class="bi bi-cart"></i> Kembali ke Keranjang</a>
+            </div>
         <?php endif; ?>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <script>
-        document.getElementById('nohp').addEventListener('input', function(e) {
+    <footer class="mt-auto p-4 border-top text-center text-muted small">
+        <p>&copy; <?php echo date("Y"); ?> Thar'z Computer. All rights reserved.</p>
+    </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Hanya jalankan script jika elemen nohp ada
+    const nohpElement = document.getElementById('nohp');
+    if (nohpElement) {
+        nohpElement.addEventListener('input', function(e) {
             // Hapus karakter non-angka
             this.value = this.value.replace(/[^0-9]/g, '');
             
@@ -372,7 +440,8 @@ if (isset($koneksi) && !$koneksi->connect_error) {
                 this.value = this.value.slice(0, 13);
             }
         });
-    </script>
+    }
+</script>
 </body>
 
 </html>

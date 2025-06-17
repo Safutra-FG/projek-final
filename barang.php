@@ -1,7 +1,7 @@
 <?php
 session_start();
 // Menggunakan file koneksi terpisah
-require 'koneksi.php';
+include 'koneksi.php';
 
 // Periksa koneksi database
 if ($koneksi->connect_error) {

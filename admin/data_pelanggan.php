@@ -77,7 +77,7 @@ $namaAkun = getNamaUser();
                             <tbody class="bg-white divide-y divide-gray-200 text-center">
                                 <?php
                                 // Konfigurasi Pagination
-                                $items_per_page = 10;
+                                $items_per_page = 7;
                                 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
                                 $offset = ($page - 1) * $items_per_page;
 

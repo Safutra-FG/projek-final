@@ -1,14 +1,15 @@
 <?php
-session_start();
 include '../koneksi.php'; // Sesuaikan path jika perlu
+include 'auth.php';
 
-// Cek jika admin sudah login (contoh sederhana)
-// if (!isset($_SESSION['admin_id'])) {
-//     header("Location: login.php");
-//     exit();
-// }
-// $id_user_admin = $_SESSION['admin_id'];
-$nama_akun_admin = "Admin Contoh"; // Placeholder, ganti dengan dari session
+$namaAkun = getNamaUser();
+
+// Pastikan koneksi database valid
+if (!isset($koneksi) || !$koneksi instanceof mysqli) {
+    die("Koneksi database belum dibuat atau salah.");
+}
+
+$nama_akun_admin = $namaAkun;
 
 // --- [ BAGIAN 1: PENGAMBILAN DATA AWAL ] ---
 $id_transaksi = $_GET['id_transaksi'] ?? 0;
@@ -54,7 +55,7 @@ if (empty($id_transaksi) || !filter_var($id_transaksi, FILTER_VALIDATE_INT)) {
 
         // Ambil riwayat pembayaran
         // Ambil total yang sudah terbayar
-        $sql_total_bayar = "SELECT COALESCE(SUM(jumlah), 0) AS total FROM bayar WHERE id_transaksi = ?";
+        $sql_total_bayar = "SELECT COALESCE(SUM(jumlah), 0) AS total FROM bayar WHERE id_transaksi = ? AND status = 'lunas'";
         $stmt_total = $koneksi->prepare($sql_total_bayar);
         $stmt_total->bind_param("i", $id_transaksi);
         $stmt_total->execute();
@@ -77,12 +78,130 @@ if (empty($id_transaksi) || !filter_var($id_transaksi, FILTER_VALIDATE_INT)) {
     }
 }
 
-// --- [ BAGIAN 2: PROSES FORM SUBMIT (POST REQUEST) ] ---
+// Handle POST requests for validation
 $success_message = null;
 $error_message = null;
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $action = $_POST['action'] ?? '';
+
+    if ($action === 'validasi_bayar' && isset($_POST['id_bayar']) && isset($_POST['id_transaksi'])) {
+        $id_bayar = intval($_POST['id_bayar']);
+        $id_transaksi_validasi = intval($_POST['id_transaksi']);
+        $koneksi->begin_transaction();
+        try {
+            // Update status bayar di tabel `bayar`
+            $stmt1 = $koneksi->prepare("UPDATE bayar SET status='lunas', catatan='' WHERE id_bayar=?");
+            $stmt1->bind_param("i", $id_bayar);
+            $stmt1->execute();
+            $stmt1->close();
+
+            // Update status transaksi di tabel `transaksi` menjadi 'lunas'
+            $stmt2 = $koneksi->prepare("UPDATE transaksi SET status='lunas' WHERE id_transaksi=?");
+            $stmt2->bind_param("i", $id_transaksi_validasi);
+            $stmt2->execute();
+            $stmt2->close();
+
+            // Kurangi stok barang (ambil detail transaksi terlebih dahulu)
+            $sql_detail = "SELECT id_barang, jumlah FROM detail_transaksi WHERE id_transaksi = ?";
+            $stmt_detail = $koneksi->prepare($sql_detail);
+            if (!$stmt_detail) throw new Exception("Gagal menyiapkan query detail stok: " . $koneksi->error);
+            $stmt_detail->bind_param("i", $id_transaksi_validasi);
+            $stmt_detail->execute();
+            $result_detail = $stmt_detail->get_result();
+            
+            while ($row = $result_detail->fetch_assoc()) {
+                $sql_update_stok = "UPDATE stok SET stok = stok - ? WHERE id_barang = ?";
+                $stmt_stok = $koneksi->prepare($sql_update_stok);
+                if (!$stmt_stok) throw new Exception("Gagal menyiapkan query update stok: " . $koneksi->error);
+                $stmt_stok->bind_param("ii", $row['jumlah'], $row['id_barang']);
+                $stmt_stok->execute();
+                $stmt_stok->close();
+            }
+            $stmt_detail->close();
+
+            $koneksi->commit();
+            $success_message = "Pembayaran berhasil divalidasi dan stok telah dikurangi!";
+            // Redirect untuk membersihkan POST data dan refresh halaman
+            header("Location: kelola_penjualan.php?status_filter=menunggu%20konfirmasi&pesan=validasi_sukses");
+            exit;
+        } catch (Exception $e) {
+            $koneksi->rollback();
+            $error_message = "Gagal validasi pembayaran: " . $e->getMessage();
+        }
+    }
+
+    // Tolak pembayaran
+    if ($action === 'tolak_bayar' && isset($_POST['id_bayar']) && isset($_POST['catatan']) && isset($_POST['id_transaksi'])) {
+        $id_bayar = intval($_POST['id_bayar']);
+        $id_transaksi_tolak = intval($_POST['id_transaksi']);
+        $catatan = trim($_POST['catatan']);
+        if (empty($catatan)) {
+            $error_message = "Catatan penolakan wajib diisi.";
+        } else {
+            $koneksi->begin_transaction();
+            try {
+                // Ambil id_customer dari tabel transaksi
+                $stmt_get_customer = $koneksi->prepare("SELECT id_customer FROM transaksi WHERE id_transaksi = ?");
+                $stmt_get_customer->bind_param("i", $id_transaksi_tolak);
+                $stmt_get_customer->execute();
+                $result_customer = $stmt_get_customer->get_result();
+                $customer_data = $result_customer->fetch_assoc();
+                $stmt_get_customer->close();
+                
+                if (!$customer_data) {
+                    throw new Exception("Data transaksi tidak ditemukan.");
+                }
+                
+                $id_customer_tolak = $customer_data['id_customer'];
+                
+                // Kembalikan stok barang (ambil detail transaksi terlebih dahulu)
+                $sql_detail = "SELECT id_barang, jumlah FROM detail_transaksi WHERE id_transaksi = ?";
+                $stmt_detail = $koneksi->prepare($sql_detail);
+                if (!$stmt_detail) throw new Exception("Gagal menyiapkan query detail stok: " . $koneksi->error);
+                $stmt_detail->bind_param("i", $id_transaksi_tolak);
+                $stmt_detail->execute();
+                $result_detail = $stmt_detail->get_result();
+                
+                while ($row = $result_detail->fetch_assoc()) {
+                    $sql_update_stok = "UPDATE stok SET stok = stok + ? WHERE id_barang = ?";
+                    $stmt_stok = $koneksi->prepare($sql_update_stok);
+                    if (!$stmt_stok) throw new Exception("Gagal menyiapkan query update stok: " . $koneksi->error);
+                    $stmt_stok->bind_param("ii", $row['jumlah'], $row['id_barang']);
+                    $stmt_stok->execute();
+                    $stmt_stok->close();
+                }
+                $stmt_detail->close();
+                
+                // Hapus data pembayaran dari tabel bayar
+                $stmt_delete_bayar = $koneksi->prepare("UPDATE bayar SET status='ditolak', catatan=? WHERE id_bayar=?");
+                $stmt_delete_bayar->bind_param("si", $catatan, $id_bayar);
+                $stmt_delete_bayar->execute();
+                $stmt_delete_bayar->close();
+                
+                // Hapus transaksi (ini seharusnya tidak dihapus jika hanya ditolak)
+                // $stmt_delete_transaksi = $koneksi->prepare("DELETE FROM transaksi WHERE id_transaksi = ?");
+                // $stmt_delete_transaksi->bind_param("i", $id_transaksi_tolak);
+                // $stmt_delete_transaksi->execute();
+                // $stmt_delete_transaksi->close();
+                
+                // Hapus customer (ini seharusnya tidak dihapus jika hanya ditolak)
+                // $stmt_delete_customer = $koneksi->prepare("DELETE FROM customer WHERE id_customer = ?");
+                // $stmt_delete_customer->bind_param("i", $id_customer_tolak);
+                // $stmt_delete_customer->execute();
+                // $stmt_delete_customer->close();
+
+                $koneksi->commit();
+                $success_message = "Pembayaran berhasil ditolak. Stok telah dikembalikan."; // Pesan disesuaikan
+                // Redirect untuk membersihkan POST data dan refresh halaman
+                header("Location: kelola_penjualan.php?status_filter=menunggu%20konfirmasi&pesan=tolak_sukses");
+                exit;
+            } catch (Exception $e) {
+                $koneksi->rollback();
+                $error_message = "Gagal tolak pembayaran: " . $e->getMessage();
+            }
+        }
+    }
 
     // -- Aksi: Simpan Pembayaran Baru (Sekarang Sekaligus Update Status) --
     if ($action === 'simpan_pembayaran_penjualan' && $transaksi_info) {
@@ -184,6 +303,19 @@ if (isset($_GET['pesan'])) {
     if ($_GET['pesan'] == 'batal_sukses') $success_message = "Pesanan berhasil dibatalkan dan stok telah dikembalikan.";
 }
 
+// --- [ BAGIAN: TABEL SEMUA PEMBAYARAN PENJUALAN ] ---
+$pembayaran_penjualan = [];
+$sql_all_bayar = "SELECT b.*, t.total, t.status as status_transaksi, c.nama_customer, c.no_telepon, c.email
+FROM bayar b
+JOIN transaksi t ON b.id_transaksi = t.id_transaksi
+JOIN customer c ON t.id_customer = c.id_customer
+WHERE t.jenis = 'penjualan'
+ORDER BY b.tanggal DESC";
+$result_all_bayar = $koneksi->query($sql_all_bayar);
+while ($row = $result_all_bayar->fetch_assoc()) {
+    $pembayaran_penjualan[] = $row;
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -198,62 +330,7 @@ if (isset($_GET['pesan'])) {
 
 <body class="bg-gray-100 text-gray-900 font-sans">
     <div class="flex min-h-screen">
-        <div class="w-64 bg-gray-800 shadow-lg flex flex-col">
-            <div class="flex-grow">
-                <div class="flex flex-col items-center my-6">
-                    <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
-                    <h1 class="text-2xl font-extrabold text-white text-center">Thar'z Computer</h1>
-                    <p class="text-sm text-gray-400">Admin Panel</p>
-                </div>
-                <ul class="px-6 space-y-3">
-                    <li>
-                        <a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">🏠</span>
-                            <span class="font-medium">Dashboard</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="pembayaran_service.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">💰</span>
-                            <span class="font-medium">Pembayaran Service</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="kelola_penjualan.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200">
-                            <span class="text-xl">💰</span>
-                            <span class="font-medium">Kelola Penjualan</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="data_service.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">📝</span>
-                            <span class="font-medium">Data Service</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="data_pelanggan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">👥</span>
-                            <span class="font-medium">Data Pelanggan</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="riwayat_transaksi.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">💳</span>
-                            <span class="font-medium">Riwayat Transaksi</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="stok_gudang.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">📦</span>
-                            <span class="font-medium">Stok Gudang</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
-                &copy; Thar'z Computer <?php echo date("Y"); ?>
-            </div>
-        </div>
+        <?php include 'includes/sidebar.php'; ?>
 
         <div class="flex-1 flex flex-col">
             <div class="flex justify-between items-center p-5 bg-white shadow-md">
@@ -337,12 +414,13 @@ if (isset($_GET['pesan'])) {
                                                 <th class="px-4 py-2 text-center font-medium text-gray-500">Metode</th>
                                                 <th class="px-4 py-2 text-center font-medium text-gray-500">Status</th>
                                                 <th class="px-4 py-2 text-left font-medium text-gray-500">Catatan</th>
+                                                <th class="px-4 py-2 text-center font-medium text-gray-500">Bukti</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-200">
                                             <?php if (empty($pembayaran_history)): ?>
                                                 <tr>
-                                                    <td colspan="5" class="px-4 py-4 text-center text-gray-500">Belum ada pembayaran yang dicatat.</td>
+                                                    <td colspan="6" class="px-4 py-4 text-center text-gray-500">Belum ada pembayaran yang dicatat.</td>
                                                 </tr>
                                             <?php else: ?>
                                                 <?php foreach ($pembayaran_history as $bayar): ?>
@@ -352,6 +430,22 @@ if (isset($_GET['pesan'])) {
                                                         <td class="px-4 py-3 whitespace-nowrap text-gray-500 text-center"><?php echo htmlspecialchars($bayar['metode']); ?></td>
                                                         <td class="px-4 py-3 whitespace-nowrap text-center"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo ($bayar['status'] == 'Lunas') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'; ?>"><?php echo htmlspecialchars($bayar['status']); ?></span></td>
                                                         <td class="px-4 py-3 text-gray-500"><?php echo htmlspecialchars($bayar['catatan'] ?: '-'); ?></td>
+                                                        <td class="px-4 py-3 text-center">
+                                                            <?php if (!empty($bayar['bukti'])): ?>
+                                                                <?php 
+                                                                $file_extension = strtolower(pathinfo($bayar['bukti'], PATHINFO_EXTENSION));
+                                                                if (in_array($file_extension, ['jpg', 'jpeg', 'png'])): 
+                                                                ?>
+                                                                    <img src="../<?php echo htmlspecialchars($bayar['bukti']); ?>" alt="Bukti Pembayaran" class="h-12 w-auto rounded cursor-pointer hover:opacity-75 transition-opacity" onclick="window.open('../<?php echo htmlspecialchars($bayar['bukti']); ?>', '_blank')">
+                                                                <?php elseif ($file_extension == 'pdf'): ?>
+                                                                    <a href="../<?php echo htmlspecialchars($bayar['bukti']); ?>" target="_blank" class="text-blue-600 hover:underline">
+                                                                        <i class="bi bi-file-pdf-fill text-2xl"></i>
+                                                                    </a>
+                                                                <?php endif; ?>
+                                                            <?php else: ?>
+                                                                <span class="text-gray-400">-</span>
+                                                            <?php endif; ?>
+                                                        </td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                             <?php endif; ?>
@@ -367,65 +461,105 @@ if (isset($_GET['pesan'])) {
                         </div>
 
                         <div class="space-y-8">
-                            <?php
-                            $sisa_tagihan = $transaksi_info['total'] - $total_terbayar;
-                            if ($transaksi_info['status'] != 'Selesai' && $transaksi_info['status'] != 'Dibatalkan' && $sisa_tagihan > 0):
+                            <?php 
+                            $current_payment_id = $_GET['id_bayar'] ?? null;
+                            $has_pending_payment = false;
+                            
+                            if ($current_payment_id && !empty($pembayaran_history)) {
+                                foreach ($pembayaran_history as $payment_rec) {
+                                    if ($payment_rec['id_bayar'] == $current_payment_id && 
+                                        ($payment_rec['status'] == 'menunggu konfirmasi' || $transaksi_info['status'] == 'menunggu pembayaran')) {
+                                        $has_pending_payment = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if ($has_pending_payment): 
                             ?>
                                 <div class="bg-white p-6 rounded-lg shadow-md">
-                                    <h3 class="text-xl font-semibold mb-4 border-b pb-2">Form Pembayaran</h3>
-                                    <form action="" method="POST">
-                                        <input type="hidden" name="action" value="simpan_pembayaran_penjualan">
-                                        <div class="space-y-4">
-                                            <div>
-                                                <label for="tanggal_pembayaran" class="block text-sm font-medium text-gray-700">Tanggal Bayar*</label>
-                                                <input type="date" name="tanggal_pembayaran" id="tanggal_pembayaran" value="<?php echo date('Y-m-d'); ?>" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                            </div>
-                                            <div>
-                                                <label for="jumlah_dibayar" class="block text-sm font-medium text-gray-700">Jumlah Dibayar*</label>
-                                                <input type="number" name="jumlah_dibayar" id="jumlah_dibayar" value="<?php echo $sisa_tagihan; ?>" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                            </div>
-                                            <div>
-                                                <label for="metode_pembayaran" class="block text-sm font-medium text-gray-700">Metode*</label>
-                                                <select id="metode_pembayaran" name="metode_pembayaran" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                                    <option value="Cash">Cash</option>
-                                                    <option value="Transfer">Transfer</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label for="status_pembayaran" class="block text-sm font-medium text-gray-700">Status Pembayaran Ini*</label>
-                                                <select id="status_pembayaran" name="status_pembayaran" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                                    <option value="Lunas">Lunas</option>
-                                                    <option value="DP">DP (Down Payment)</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label for="catatan_pembayaran" class="block text-sm font-medium text-gray-700">Catatan</label>
-                                                <textarea id="catatan_pembayaran" name="catatan_pembayaran" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
-                                            </div>
+                                    <h3 class="text-xl font-semibold mb-4 border-b pb-2">Aksi Pembayaran</h3>
+                                    <div class="space-y-4">
+                                        <div class="mb-3">
+                                            <label for="catatan" class="block text-sm font-medium text-gray-700">Catatan</label>
+                                            <textarea name="catatan" id="catatan" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Tambahkan catatan atau alasan penolakan"></textarea>
                                         </div>
-                                        <button type="submit" class="w-full mt-6 px-4 py-2 bg-green-600 text-white font-semibold rounded-md shadow-sm hover:bg-green-700">
-                                            <i class="bi bi-save-fill"></i> Simpan Pembayaran
-                                        </button>
-                                    </form>
+                                        <div class="flex space-x-4">
+                                            <form method="post" onsubmit="return confirm('Yakin validasi pembayaran ini?');" class="flex-1">
+                                                <input type="hidden" name="id_bayar" value="<?= htmlspecialchars($current_payment_id) ?>">
+                                                <input type="hidden" name="id_transaksi" value="<?= htmlspecialchars($transaksi_info['id_transaksi']) ?>">
+                                                <input type="hidden" name="action" value="validasi_bayar">
+                                                <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md"><i class="bi bi-check-circle"></i> Validasi Pembayaran</button>
+                                            </form>
+                                            <form method="post" onsubmit="return confirm('Yakin tolak pembayaran ini? Stok akan dikembalikan.');" class="flex-1">
+                                                <input type="hidden" name="id_bayar" value="<?= htmlspecialchars($current_payment_id) ?>">
+                                                <input type="hidden" name="id_transaksi" value="<?= htmlspecialchars($transaksi_info['id_transaksi']) ?>">
+                                                <input type="hidden" name="action" value="tolak_bayar">
+                                                <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md"><i class="bi bi-x-circle"></i> Tolak Pembayaran</button>
+                                            </form>
+                                        </div>
+                                    </div>
                                 </div>
                             <?php else: ?>
-                                <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                                    <p class="text-green-600 font-semibold"><i class="bi bi-check-circle-fill"></i> Tagihan untuk pesanan ini sudah lunas atau dalam status final.</p>
-                                </div>
-                            <?php endif; ?>
+                                <?php
+                                $sisa_tagihan = $transaksi_info['total'] - $total_terbayar;
+                                if ($transaksi_info['status'] != 'Selesai' && $transaksi_info['status'] != 'Dibatalkan' && $sisa_tagihan > 0):
+                                ?>
+                                    <div class="bg-white p-6 rounded-lg shadow-md">
+                                        <h3 class="text-xl font-semibold mb-4 border-b pb-2">Form Pembayaran</h3>
+                                        <form action="" method="POST">
+                                            <input type="hidden" name="action" value="simpan_pembayaran_penjualan">
+                                            <div class="space-y-4">
+                                                <div>
+                                                    <label for="tanggal_pembayaran" class="block text-sm font-medium text-gray-700">Tanggal Bayar*</label>
+                                                    <input type="date" name="tanggal_pembayaran" id="tanggal_pembayaran" value="<?php echo date('Y-m-d'); ?>" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                                </div>
+                                                <div>
+                                                    <label for="jumlah_dibayar" class="block text-sm font-medium text-gray-700">Jumlah Dibayar*</label>
+                                                    <input type="number" name="jumlah_dibayar" id="jumlah_dibayar" value="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                                </div>
+                                                <div>
+                                                    <label for="metode_pembayaran" class="block text-sm font-medium text-gray-700">Metode*</label>
+                                                    <select id="metode_pembayaran" name="metode_pembayaran" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                                        <option value="Cash">Cash</option>
+                                                        <option value="Transfer">Transfer</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label for="status_pembayaran" class="block text-sm font-medium text-gray-700">Status Pembayaran Ini*</label>
+                                                    <select id="status_pembayaran" name="status_pembayaran" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                                        <option value="Lunas">Lunas</option>
+                                                        <option value="DP">DP (Down Payment)</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label for="catatan_pembayaran" class="block text-sm font-medium text-gray-700">Catatan</label>
+                                                    <textarea id="catatan_pembayaran" name="catatan_pembayaran" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                                                </div>
+                                            </div>
+                                            <button type="submit" class="w-full mt-6 px-4 py-2 bg-green-600 text-white font-semibold rounded-md shadow-sm hover:bg-green-700">
+                                                <i class="bi bi-save-fill"></i> Simpan Pembayaran
+                                            </button>
+                                        </form>
+                                    </div>
 
-                            <?php if ($transaksi_info['status'] != 'Selesai' && $transaksi_info['status'] != 'Dibatalkan'): ?>
-                                <div class="bg-white p-6 rounded-lg shadow-md border border-red-200 mt-8">
-                                    <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-red-700">Aksi Berbahaya</h3>
-                                    <form action="" method="POST" onsubmit="return confirm('PERINGATAN! Anda akan MENGHAPUS PERMANEN pesanan ini beserta riwayatnya dan mengembalikan stok. Aksi ini tidak dapat diurungkan. Lanjutkan?');">
-                                        <input type="hidden" name="action" value="batalkan_pesanan">
-                                        <button type="submit" class="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-800">Batalkan Pesanan Ini</button>
-                                    </form>
-                                </div>
+                                    <?php if ($transaksi_info['status'] != 'Selesai' && $transaksi_info['status'] != 'Dibatalkan'): ?>
+                                    <div class="bg-white p-6 rounded-lg shadow-md border border-red-200 mt-8">
+                                        <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-red-700">Aksi Berbahaya</h3>
+                                        <form action="" method="POST" onsubmit="return confirm('PERINGATAN! Anda akan MENGHAPUS PERMANEN pesanan ini beserta riwayatnya dan mengembalikan stok. Aksi ini tidak dapat diurungkan. Lanjutkan?');">
+                                            <input type="hidden" name="action" value="batalkan_pesanan">
+                                            <button type="submit" class="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-800">Batalkan Pesanan Ini</button>
+                                        </form>
+                                    </div>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                                        <p class="text-green-600 font-semibold"><i class="bi bi-check-circle-fill"></i> Tagihan untuk pesanan ini sudah lunas atau dalam status final.</p>
+                                    </div>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
-
                 <?php else: ?>
                     <div class="bg-white p-8 rounded-lg shadow-md text-center">
                         <p class="text-gray-600">Silakan pilih sebuah transaksi dari halaman "Kelola Pesanan Penjualan" untuk melihat detailnya.</p>

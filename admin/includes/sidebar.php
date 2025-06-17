@@ -25,7 +25,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             </li>
             <li>
                 <a href="kelola_penjualan.php" class="flex items-center space-x-3 p-3 rounded-lg <?php echo $currentPage == 'kelola_penjualan.php' ? 'text-white bg-blue-600' : 'text-gray-300 hover:bg-gray-700 hover:text-white'; ?> transition duration-200">
-                    <span class="text-xl">💰</span>
+                    <span class="text-xl">🛒</span>
                     <span class="font-medium">Kelola Penjualan</span>
                 </a>
             </li>

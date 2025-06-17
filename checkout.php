@@ -1,6 +1,6 @@
 <?php
 session_start();
-require 'koneksi.php';
+include 'koneksi.php';
 
 // --- BAGIAN DEBUGGING ---
 // Jika masih ada masalah, hapus tanda // pada baris di bawah ini.
