@@ -1,77 +1,51 @@
 <?php
-session_start();
 include '../koneksi.php';
-// Autentikasi: hanya user dengan role teknisi yang boleh mengakses
-if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'teknisi') {
-    header("Location: ../login.php");
-    exit();
+
+// Pastikan fungsi ini ada di auth.php atau sesuaikan
+if (function_exists('getNamaUser')) {
+    $namaAkun = getNamaUser();
+} else {
+    // Fallback jika fungsi tidak ditemukan
+    $namaAkun = 'Admin';
 }
-$koneksi = new mysqli("localhost", "root", "", "tharz_computer");
 
-// Cek kalau form dikirim
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
-    $id_service = $_POST['id_service'];
-    $status     = $_POST['status'];
-
-    // Validasi simple
-    $allowed = ['diajukan', 'dikonfirmasi', 'menunggu sparepart', 'diperbaiki', 'selesai', 'dibatalkan'];
-    if (!in_array($status, $allowed)) {
-        echo "Status tidak valid";
-        exit;
-    }
-
-    $stmt = $koneksi->prepare("UPDATE service SET status = ? WHERE id_service = ?");
-    $stmt->bind_param("si", $status, $id_service);
-    $stmt->execute();
-}
-?>
-
-<?php
-$namaAkun = "Teknisi"; // Mengatur nama akun sebagai Teknisi
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
-    <title>Progres Servis - Thar'z Computer</title>
+    <title>Data Service - Thar'z Computer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Gaya dasar untuk card, agar lebih menarik dan konsisten dengan Tailwind */
-        .card {
-            background-color: #fff;
-            padding: 24px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            transition: transform 0.2s ease-in-out;
+        /* Gaya tambahan untuk select agar terlihat lebih rapi dengan Tailwind */
+        .form-select {
+            display: block;
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            color: #4A5568;
+            background-color: #F7FAFC;
+            border: 1px solid #CBD5E0;
+            border-radius: 0.375rem;
+            appearance: none;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
         }
 
-        .card:hover {
-            transform: translateY(-5px);
-        }
-
-        .card h3 {
-            margin-top: 0;
-            color: #4A5568; /* Warna teks yang lebih gelap */
-            font-size: 1.125rem; /* Ukuran font lebih proporsional */
-            margin-bottom: 12px;
-            font-weight: 600; /* Sedikit lebih tebal */
-        }
-
-        .card p {
-            font-size: 2.25em; /* Ukuran angka lebih besar */
-            font-weight: bold;
-            color: #2D3748; /* Warna angka lebih gelap */
+        .form-select:focus {
+            outline: none;
+            border-color: #63B3ED;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
         }
     </style>
 </head>
+
 <body class="bg-gray-100 text-gray-900 font-sans antialiased">
 
     <div class="flex min-h-screen">
-
         <div class="w-64 bg-gray-800 shadow-lg flex flex-col justify-between py-6">
             <div>
                 <div class="flex flex-col items-center mb-10">
@@ -108,9 +82,8 @@ $namaAkun = "Teknisi"; // Mengatur nama akun sebagai Teknisi
         </div>
 
         <div class="flex-1 flex flex-col">
-
             <div class="flex justify-between items-center p-5 bg-white shadow-md">
-                <h2 class="text-2xl font-bold text-gray-800">Progres Servis</h2>
+                <h2 class="text-2xl font-bold text-gray-800">Data Service</h2>
                 <div class="flex items-center space-x-5">
                     <button class="relative text-gray-600 hover:text-blue-600 transition duration-200" title="Pemberitahuan">
                         <span class="text-2xl">🔔</span>
@@ -123,67 +96,95 @@ $namaAkun = "Teknisi"; // Mengatur nama akun sebagai Teknisi
                 </div>
             </div>
 
-            <div class="flex-1 p-8 overflow-y-auto">
-
+            <div class="flex-1 p-8 overflow-auto">
                 <div class="mb-6">
-                    <a href="dashboard.php" class="inline-flex items-center text-blue-600 hover:text-blue-800 transition duration-200">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                        Kembali ke Dashboard
+                    <a href="dashboard.php" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-200 text-sm font-medium">
+                        &larr; Kembali ke Dashboard
                     </a>
                 </div>
 
                 <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-xl font-semibold mb-6 text-gray-800 text-center">Update Progres Servis</h3>
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">Daftar Data Service</h2>
                     <div class="overflow-x-auto">
-                        <table class="min-w-full bg-white border border-gray-200 rounded-lg overflow-hidden">
-                            <thead class="bg-gray-100">
+                        <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
+                            <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">ID Pesanan</th>
-                                    <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">Device</th>
-                                    <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">Keluhan</th>
-                                    <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">Status</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Pesanan</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Keluhan</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-200">
+                            <tbody class="bg-white divide-y divide-gray-200">
                                 <?php
-                                // Include koneksi.php jika belum di-include di bagian atas file
-                                // include '../koneksi.php'; // Ini sudah di-include di awal script
-
-                                $sql = "SELECT id_service, device, keluhan, status FROM service";
+                                $sql = "SELECT service.*, customer.nama_customer FROM service JOIN customer ON service.id_customer = customer.id_customer ORDER BY id_service DESC";
                                 $result = $koneksi->query($sql);
 
                                 if ($result->num_rows > 0) {
                                     while ($row = $result->fetch_assoc()) {
-                                        echo "<tr class='hover:bg-gray-50'>";
-                                        echo "<td class='py-2 px-4 border-b text-sm text-gray-700'>" . $row["id_service"] . "</td>";
-                                        echo "<td class='py-2 px-4 border-b text-sm text-gray-700'>" . $row["device"] . "</td>";
-                                        echo "<td class='py-2 px-4 border-b text-sm text-gray-700'>" . htmlspecialchars($row["keluhan"]) . "</td>";
+                                        echo "<tr>";
+                                        echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>" . htmlspecialchars($row["id_service"]) . "</td>";
+                                        echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>" . htmlspecialchars($row["nama_customer"]) . "</td>";
+                                        echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>" . htmlspecialchars($row["device"]) . "</td>";
+                                        echo "<td class='px-6 py-4 text-sm text-gray-900'>" . htmlspecialchars($row["keluhan"]) . "</td>";
 
-                                        // Mulai form untuk update status
-                                        echo "<td class='py-2 px-4 border-b text-sm text-gray-700'>";
-                                ?>
-                                        <form method="POST" class="flex items-center space-x-2">
-                                            <input type="hidden" name="id_service" value="<?php echo $row['id_service']; ?>">
-                                            <select name="status" class="block w-full py-1 px-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                                <?php
-                                                $statusList = ['diajukan', 'dikonfirmasi', 'menunggu sparepart', 'diperbaiki', 'selesai', 'dibatalkan'];
-                                                foreach ($statusList as $status) {
-                                                    $selected = ($row['status'] == $status) ? 'selected' : '';
-                                                    echo "<option value='$status' $selected>" . ucfirst($status) . "</option>";
-                                                }
-                                                ?>
-                                            </select>
-                                            <button type="submit" name="update_status" class="inline-flex justify-center py-1 px-3 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200">Update</button>
-                                        </form>
-                                <?php
+                                        // Tampilan status
+                                        echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>";
+                                        $statusClass = '';
+                                        switch ($row['status']) {
+                                            case 'diajukan':
+                                                $statusClass = 'bg-gray-100 text-gray-800';
+                                                break;
+                                            case 'dikonfirmasi':
+                                                $statusClass = 'bg-blue-100 text-blue-800';
+                                                break;
+                                            case 'diverifikasi':
+                                                $statusClass = 'bg-blue-100 text-blue-800';
+                                                break;
+                                            case 'menunggu sparepart':
+                                                $statusClass = 'bg-purple-100 text-purple-800';
+                                                break;
+                                            case 'diperbaiki':
+                                                $statusClass = 'bg-yellow-100 text-yellow-800';
+                                                break;
+                                            case 'selesai':
+                                                $statusClass = 'bg-green-100 text-green-800';
+                                                break;
+                                            case 'dibatalkan':
+                                                $statusClass = 'bg-red-100 text-red-800';
+                                                break;
+                                            default:
+                                                $statusClass = 'bg-gray-100 text-gray-800';
+                                                break;
+                                        }
+                                        echo "<span class='px-2 inline-flex text-xs leading-5 font-semibold rounded-full " . $statusClass . "'>" . ucfirst(htmlspecialchars($row['status'])) . "</span>";
                                         echo "</td>";
+                                        echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-center space-x-2'>";
+                                        if ($row['status'] == 'menunggu konfirmasi') {
+
+                                            $id_service = $row['id_service'];
+
+                                            echo "<a href='konfirmasi_aksi.php?id={$id_service}' 
+                                                    onclick=\"return confirm('Apakah Anda yakin ingin mengkonfirmasi service ini?');\" 
+                                                    class='inline-block bg-blue-500 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-md shadow-sm transition duration-200' 
+                                                    title='Klik untuk mengkonfirmasi'>
+                                                    Konfirmasi
+                                                </a>";
+                                        } else {
+                                            $link_edit = ($row['status'] == 'diajukan') ? 'cek.php' : 'edit_service.php';
+                                            echo "<a href='" . $link_edit . "?id=" . htmlspecialchars($row['id_service']) . "' class='inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-md shadow-sm transition duration-200' title='Edit Detail Service'>Proses</a>";
+                                        }
+                                        echo "</td>"; // ========================================================
+
                                         echo "</tr>";
                                     }
                                 } else {
-                                    echo "<tr><td colspan='4' class='py-4 text-center text-gray-500'>Belum ada data progres servis.</td></tr>";
+                                    echo "<tr><td colspan='7' class='px-6 py-4 text-center text-sm text-gray-500'>Tidak ada data service.</td></tr>";
                                 }
 
-                                // $koneksi->close(); // Tutup koneksi di sini agar bisa digunakan lagi di bagian lain jika perlu
+                                $koneksi->close();
                                 ?>
                             </tbody>
                         </table>
@@ -194,4 +195,5 @@ $namaAkun = "Teknisi"; // Mengatur nama akun sebagai Teknisi
     </div>
 
 </body>
+
 </html>
