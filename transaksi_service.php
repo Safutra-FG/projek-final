@@ -1,15 +1,13 @@
 <?php
 
-session_start();
 include 'koneksi.php';
 
-// Inisialisasi variabel
-$koneksi = null;
 $id_service_input = null;
 $amount_to_pay = null;
 $service_data = null;
 $error_message = null;
 $namaAkun = "Customer"; // Default account name for this page
+
 
 
 // 1. Ambil dan validasi parameter dari URL
@@ -124,9 +122,9 @@ if (isset($_GET['id_service']) && isset($_GET['amount'])) {
 
                         <div class="col-md-6">
                             <div class="p-3 border rounded-3 h-100">
-                                <h3 class="mb-3"><i class="bi bi-bank"></i> 2. Transfer Bank / E-Wallet</h3>
+                                <h3 class="mb-3"><i class="bi bi-bank"></i> 2. Transfer Bank</h3>
                                 <p>Lakukan transfer ke salah satu rekening resmi berikut:</p>
-                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -142,13 +140,11 @@ if (isset($_GET['id_service']) && isset($_GET['amount'])) {
                                 <input type="hidden" name="amount" value="<?php echo htmlspecialchars($amount_to_pay); ?>">
 
                                 <div class="mb-3">
-                                    <label for="metode_transfer" class="form-label">Transfer Melalui:</label>
+                                    <label for="metode_transfer" class="form-label">Metode Pembayaran:</label>
                                     <select class="form-select" id="metode_transfer" name="metode_transfer" required>
-                                        <option value="" disabled selected>-- Pilih Bank / E-Wallet --</option>
-                                        <option value="BCA">Bank BCA</option>
-                                        <option value="Mandiri">Bank Mandiri</option>
-                                        <option value="Dana">Dana</option>
-                                        <option value="Lainnya">Bank / E-Wallet Lainnya</option>
+                                        <option value="" disabled selected>-- Pilih Metode Pembayaran --</option>
+                                        <option value="cash">Cash di Toko</option>
+                                        <option value="transfer">Transfer Bank</option>
                                     </select>
                                 </div>
 

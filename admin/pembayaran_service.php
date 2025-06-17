@@ -19,7 +19,6 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['cari_id_service'])) {
     if (!empty($id_service_input)) {
         // Query untuk mengambil data service, customer, dan total tagihan dari detail_service
         // Query baru untuk mengambil data service, customer, tagihan, DAN total yang sudah dibayar
-        // ... sekitar baris 33
         $sql_cari = "SELECT
                 s.id_service, s.device, s.status AS status_service_sekarang,
                 c.id_customer, c.nama_customer,
@@ -27,7 +26,13 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['cari_id_service'])) {
                 (SELECT COALESCE(SUM(b.jumlah), 0)
                 FROM transaksi t
                 JOIN bayar b ON t.id_transaksi = b.id_transaksi
-                WHERE t.id_service = s.id_service AND t.jenis = 'service') AS total_dibayar
+                WHERE t.id_service = s.id_service AND t.jenis = 'service') AS total_dibayar,
+                (SELECT b.bukti 
+                FROM transaksi t 
+                JOIN bayar b ON t.id_transaksi = b.id_transaksi 
+                WHERE t.id_service = s.id_service 
+                AND b.status = 'menunggu konfirmasi' 
+                ORDER BY b.tanggal DESC LIMIT 1) AS bukti_pembayaran_terakhir
             FROM service s
             JOIN customer c ON s.id_customer = c.id_customer
             LEFT JOIN detail_service ds ON s.id_service = ds.id_service
@@ -51,9 +56,8 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['cari_id_service'])) {
                     'nama_customer' => $data_service_dan_tagihan['nama_customer']
                 ];
                 $total_tagihan_aktual = $data_service_dan_tagihan['total_tagihan'];
-                // ...
-                $total_tagihan_aktual = $data_service_dan_tagihan['total_tagihan'];
-                $total_sudah_dibayar = $data_service_dan_tagihan['total_dibayar']; // Ambil data baru dari query
+                $total_sudah_dibayar = $data_service_dan_tagihan['total_dibayar'];
+                $bukti_pembayaran = $data_service_dan_tagihan['bukti_pembayaran_terakhir'];
                 $sisa_tagihan = $total_tagihan_aktual - $total_sudah_dibayar;
 
                 // Logika untuk menentukan status pembayaran dan warna badge
@@ -67,7 +71,6 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['cari_id_service'])) {
                     $status_pembayaran_info = "Lunas";
                     $badge_class = "bg-green-200 text-green-800";
                 }
-                // ...
             } else {
                 $error_message_service = "Service dengan ID \"" . htmlspecialchars($id_service_input) . "\" tidak ditemukan.";
             }
@@ -176,9 +179,51 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['simpan_pembayaran'])) 
             if (!$stmt_bayar->execute()) throw new Exception("Insert `bayar` gagal: " . $stmt_bayar->error);
             $stmt_bayar->close();
 
+            // Update status pembayaran yang menunggu konfirmasi
+            if (isset($bukti_pembayaran) && $bukti_pembayaran) {
+                $sql_update_bayar = "UPDATE bayar b 
+                                    JOIN transaksi t ON b.id_transaksi = t.id_transaksi 
+                                    SET b.status = 'dikonfirmasi' 
+                                    WHERE t.id_service = ? AND b.status = 'menunggu konfirmasi'";
+                $stmt_update = $koneksi->prepare($sql_update_bayar);
+                $stmt_update->bind_param("s", $id_service_proses);
+                $stmt_update->execute();
+                $stmt_update->close();
+            }
+
+            // Hitung total pembayaran setelah pembayaran baru
+            $sql_total_bayar_setelah = "SELECT COALESCE(SUM(b.jumlah), 0) as total_bayar 
+                                       FROM transaksi t 
+                                       JOIN bayar b ON t.id_transaksi = b.id_transaksi 
+                                       WHERE t.id_service = ?";
+            $stmt_total_setelah = $koneksi->prepare($sql_total_bayar_setelah);
+            $stmt_total_setelah->bind_param("s", $id_service_proses);
+            $stmt_total_setelah->execute();
+            $result_total_setelah = $stmt_total_setelah->get_result();
+            $total_bayar_setelah = 0;
+            if ($row_total_setelah = $result_total_setelah->fetch_assoc()) {
+                $total_bayar_setelah = $row_total_setelah['total_bayar'];
+            }
+            $stmt_total_setelah->close();
+
+            // Update status transaksi berdasarkan total pembayaran vs total tagihan
+            $status_transaksi_baru = 'menunggu pembayaran';
+            if ($total_bayar_setelah >= $total_tagihan_hidden && $total_tagihan_hidden > 0) {
+                $status_transaksi_baru = 'lunas';
+            } elseif ($total_bayar_setelah > 0) {
+                $status_transaksi_baru = 'dp';
+            }
+
+            // Update status transaksi yang baru dibuat
+            $sql_update_transaksi_status = "UPDATE transaksi SET status = ? WHERE id_transaksi = ?";
+            $stmt_update_transaksi_status = $koneksi->prepare($sql_update_transaksi_status);
+            $stmt_update_transaksi_status->bind_param("si", $status_transaksi_baru, $id_transaksi_baru);
+            $stmt_update_transaksi_status->execute();
+            $stmt_update_transaksi_status->close();
+
             // Jika semua berhasil
             $koneksi->commit();
-            $success_message_payment = "Pembayaran untuk service ID " . htmlspecialchars($id_service_proses) . " berhasil dicatat!";
+            $success_message_payment = "Pembayaran untuk service ID " . htmlspecialchars($id_service_proses) . " berhasil dicatat! Status transaksi: " . ucfirst($status_transaksi_baru);
             // Reset form
             $id_service_dipilih = null;
             $service_info = null;
@@ -190,6 +235,110 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['simpan_pembayaran'])) 
         }
     }
 }
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['verifikasi_submit'])) {
+    $id_bayar = intval($_POST['verifikasi_id_bayar']);
+    $id_transaksi = intval($_POST['verifikasi_id_transaksi']);
+    $jumlah = floatval($_POST['jumlah_dibayar']);
+    $status = $_POST['status_pembayaran']; // 'lunas' atau 'dp'
+    $catatan = trim($_POST['catatan_pembayaran']);
+
+    $koneksi->begin_transaction();
+    try {
+        // Update data bayar
+        $sql_update_bayar = "UPDATE bayar SET jumlah = ?, status = ?, catatan = ? WHERE id_bayar = ?";
+        $stmt_update_bayar = $koneksi->prepare($sql_update_bayar);
+        $stmt_update_bayar->bind_param("dssi", $jumlah, $status, $catatan, $id_bayar);
+        $stmt_update_bayar->execute();
+        $stmt_update_bayar->close();
+
+        // Hitung total pembayaran untuk service ini
+        $sql_total_bayar = "SELECT COALESCE(SUM(b.jumlah), 0) as total_bayar 
+                           FROM transaksi t 
+                           JOIN bayar b ON t.id_transaksi = b.id_transaksi 
+                           WHERE t.id_service = (SELECT id_service FROM transaksi WHERE id_transaksi = ?)";
+        $stmt_total = $koneksi->prepare($sql_total_bayar);
+        $stmt_total->bind_param("i", $id_transaksi);
+        $stmt_total->execute();
+        $result_total = $stmt_total->get_result();
+        $total_bayar = 0;
+        if ($row_total = $result_total->fetch_assoc()) {
+            $total_bayar = $row_total['total_bayar'];
+        }
+        $stmt_total->close();
+
+        // Ambil total tagihan service
+        $sql_tagihan = "SELECT COALESCE(SUM(ds.total), 0) as total_tagihan 
+                       FROM service s 
+                       LEFT JOIN detail_service ds ON s.id_service = ds.id_service 
+                       WHERE s.id_service = (SELECT id_service FROM transaksi WHERE id_transaksi = ?)";
+        $stmt_tagihan = $koneksi->prepare($sql_tagihan);
+        $stmt_tagihan->bind_param("i", $id_transaksi);
+        $stmt_tagihan->execute();
+        $result_tagihan = $stmt_tagihan->get_result();
+        $total_tagihan = 0;
+        if ($row_tagihan = $result_tagihan->fetch_assoc()) {
+            $total_tagihan = $row_tagihan['total_tagihan'];
+        }
+        $stmt_tagihan->close();
+
+        // Update status transaksi berdasarkan total pembayaran vs total tagihan
+        $status_transaksi_baru = 'menunggu pembayaran';
+        if ($total_bayar >= $total_tagihan && $total_tagihan > 0) {
+            $status_transaksi_baru = 'lunas';
+        } elseif ($total_bayar > 0) {
+            $status_transaksi_baru = 'dp';
+        }
+
+        $sql_update_transaksi = "UPDATE transaksi SET status = ? WHERE id_transaksi = ?";
+        $stmt_update_transaksi = $koneksi->prepare($sql_update_transaksi);
+        $stmt_update_transaksi->bind_param("si", $status_transaksi_baru, $id_transaksi);
+        $stmt_update_transaksi->execute();
+        $stmt_update_transaksi->close();
+
+        $koneksi->commit();
+        $success_message_payment = "Pembayaran berhasil diverifikasi! Status transaksi: " . ucfirst($status_transaksi_baru);
+    } catch (Exception $e) {
+        $koneksi->rollback();
+        $error_message_payment = "Gagal verifikasi pembayaran: " . $e->getMessage();
+    }
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['tolak_submit'])) {
+    $id_bayar = intval($_POST['verifikasi_id_bayar']);
+    $catatan = trim($_POST['catatan_pembayaran']);
+    $koneksi->begin_transaction();
+    try {
+        $sql_update_bayar = "UPDATE bayar SET status = 'ditolak', catatan = ? WHERE id_bayar = ?";
+        $stmt_update_bayar = $koneksi->prepare($sql_update_bayar);
+        $stmt_update_bayar->bind_param("si", $catatan, $id_bayar);
+        $stmt_update_bayar->execute();
+        $stmt_update_bayar->close();
+        $koneksi->commit();
+        $success_message_payment = "Pembayaran berhasil ditolak!";
+    } catch (Exception $e) {
+        $koneksi->rollback();
+        $error_message_payment = "Gagal menolak pembayaran: " . $e->getMessage();
+    }
+}
+
+// Tambahkan setelah pengambilan data service dan pembayaran
+if ($id_service_dipilih) {
+    // Ambil pembayaran menunggu konfirmasi
+    $sql_bayar_pending = "SELECT b.*, t.id_transaksi FROM bayar b JOIN transaksi t ON b.id_transaksi = t.id_transaksi WHERE t.id_service = ? AND b.status = 'menunggu konfirmasi' ORDER BY b.tanggal DESC";
+    $stmt_bayar_pending = $koneksi->prepare($sql_bayar_pending);
+    $stmt_bayar_pending->bind_param("i", $id_service_dipilih);
+    $stmt_bayar_pending->execute();
+    $result_bayar_pending = $stmt_bayar_pending->get_result();
+    $pembayaran_pending = [];
+    while ($row = $result_bayar_pending->fetch_assoc()) {
+        $pembayaran_pending[] = $row;
+    }
+    $stmt_bayar_pending->close();
+}
+
+// Cek jika ada pembayaran pending
+$pending = !empty($pembayaran_pending) ? $pembayaran_pending[0] : null;
 
 ?>
 <!DOCTYPE html>
@@ -288,16 +437,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['simpan_pembayaran'])) 
 
                     <?php if ($sisa_tagihan > 0): ?>
                         <div class="bg-white p-6 rounded-lg shadow-md">
-                            <h3 class="text-xl font-semibold mb-6 text-gray-700">3. Input Detail Pembayaran Diterima</h3>
-                            <form action="" method="POST" enctype="multipart/form-data">
+                            <h3 class="text-xl font-semibold mb-6 text-gray-700">3. Input/Verifikasi Pembayaran</h3>
+                            <form action="" method="POST" enctype="multipart/form-data" class="space-y-4">
+                                <?php if ($pending): ?>
+                                    <input type="hidden" name="verifikasi_id_bayar" value="<?php echo intval($pending['id_bayar']); ?>">
+                                    <input type="hidden" name="verifikasi_id_transaksi" value="<?php echo intval($pending['id_transaksi']); ?>">
+                                <?php endif; ?>
                                 <input type="hidden" name="id_service_proses" value="<?php echo htmlspecialchars($id_service_dipilih); ?>">
                                 <input type="hidden" name="id_customer_proses" value="<?php echo htmlspecialchars($customer_info['id_customer']); ?>">
                                 <input type="hidden" name="total_tagihan_hidden" value="<?php echo htmlspecialchars($total_tagihan_aktual); ?>">
-
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                                     <div>
                                         <label for="tanggal_pembayaran" class="block text-sm font-medium text-gray-700">Tanggal Pembayaran Diterima <span class="text-red-500">*</span></label>
-                                        <input type="date" name="tanggal_pembayaran" id="tanggal_pembayaran" value="<?php echo date('Y-m-d'); ?>" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <input type="date" name="tanggal_pembayaran" id="tanggal_pembayaran" value="<?php echo $pending ? date('Y-m-d', strtotime($pending['tanggal'])) : date('Y-m-d'); ?>" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                     </div>
                                     <div>
                                         <label for="jumlah_dibayar" class="block text-sm font-medium text-gray-700">Jumlah Dibayar <span class="text-red-500">*</span></label>
@@ -305,37 +457,53 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['simpan_pembayaran'])) 
                                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                 <span class="text-gray-500 sm:text-sm">Rp</span>
                                             </div>
-                                            <input type="number" name="jumlah_dibayar" id="jumlah_dibayar" value="<?php echo $sisa_tagihan > 0 ? $sisa_tagihan : ''; ?>" required class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="0">
+                                            <input type="number" name="jumlah_dibayar" id="jumlah_dibayar" value="<?php echo $pending ? intval($pending['jumlah']) : ($sisa_tagihan > 0 ? $sisa_tagihan : ''); ?>" required class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="0">
                                         </div>
                                     </div>
                                     <div>
                                         <label for="metode_pembayaran" class="block text-sm font-medium text-gray-700">Metode Pembayaran <span class="text-red-500">*</span></label>
                                         <select id="metode_pembayaran" name="metode_pembayaran" required class="block w-full pl-2 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                            <option value="Cash">Cash</option>
-                                            <option value="Transfer">Transfer</option>
+                                            <option value="Cash" <?php echo ($pending && strtolower($pending['metode']) == 'cash') ? 'selected' : ''; ?>>Cash</option>
+                                            <option value="Transfer" <?php echo ($pending && strtolower($pending['metode']) == 'transfer') ? 'selected' : ''; ?>>Transfer</option>
                                         </select>
                                     </div>
                                     <div>
                                         <label for="status_pembayaran" class="block text-sm font-medium text-gray-700">Status Pembayaran <span class="text-red-500">*</span></label>
                                         <select id="status_pembayaran" name="status_pembayaran" required class="block w-full pl-2 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                            <option value="Lunas">Lunas</option>
-                                            <option value="DP">DP (Down Payment)</option>
+                                            <option value="Lunas" <?php echo ($pending && $pending['status'] == 'lunas') ? 'selected' : ''; ?>>Lunas</option>
+                                            <option value="DP" <?php echo ($pending && strtolower($pending['status']) == 'dp') ? 'selected' : ''; ?>>DP (Down Payment)</option>
                                         </select>
                                     </div>
                                     <div>
                                         <label for="bukti_pembayaran" class="block text-sm font-medium text-gray-700">Bukti Pembayaran</label>
-                                        <input type="file" name="bukti_pembayaran" id="bukti_pembayaran" accept="image/*,.pdf" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                        <p class="mt-1 text-sm text-gray-500">Format yang didukung: JPG, PNG, PDF (Maks. 2MB)</p>
+                                        <?php if ($pending && $pending['bukti']): ?>
+                                            <?php $file_extension = strtolower(pathinfo($pending['bukti'], PATHINFO_EXTENSION)); ?>
+                                            <div class="mt-2">
+                                                <?php if (in_array($file_extension, ['jpg', 'jpeg', 'png'])): ?>
+                                                    <img src="../<?php echo htmlspecialchars($pending['bukti']); ?>" alt="Bukti Pembayaran" class="max-w-xs rounded-lg shadow-md cursor-pointer" onclick="window.open('../<?php echo htmlspecialchars($pending['bukti']); ?>', '_blank')">
+                                                <?php elseif ($file_extension == 'pdf'): ?>
+                                                    <a href="../<?php echo htmlspecialchars($pending['bukti']); ?>" target="_blank" class="text-blue-600 hover:underline">Lihat Bukti PDF</a>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <input type="file" name="bukti_pembayaran" id="bukti_pembayaran" accept="image/*,.pdf" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                            <p class="mt-1 text-sm text-gray-500">Format yang didukung: JPG, PNG, PDF (Maks. 2MB)</p>
+                                        <?php endif; ?>
                                     </div>
                                     <div class="md:col-span-2">
                                         <label for="catatan_pembayaran" class="block text-sm font-medium text-gray-700">Catatan Tambahan</label>
-                                        <textarea name="catatan_pembayaran" id="catatan_pembayaran" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Tambahkan catatan jika diperlukan..."></textarea>
+                                        <textarea name="catatan_pembayaran" id="catatan_pembayaran" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Tambahkan catatan jika diperlukan..."><?php echo $pending ? htmlspecialchars($pending['catatan']) : ''; ?></textarea>
                                     </div>
                                 </div>
-                                <div class="mt-8 flex justify-end">
-                                    <button type="submit" name="simpan_pembayaran" class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 font-medium">
-                                        Simpan Pembayaran
+                                <div class="mt-8 flex justify-end gap-2">
+                                    <button type="submit" name="<?php echo $pending ? 'verifikasi_submit' : 'simpan_pembayaran'; ?>" class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 font-medium">
+                                        <?php echo $pending ? 'Setujui' : 'Simpan Pembayaran'; ?>
                                     </button>
+                                    <?php if ($pending): ?>
+                                        <button type="submit" name="tolak_submit" class="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 font-medium" onclick="return confirm('Yakin tolak pembayaran ini?')">
+                                            Tolak
+                                        </button>
+                                    <?php endif; ?>
                                 </div>
                             </form>
                         </div>

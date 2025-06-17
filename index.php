@@ -267,8 +267,8 @@ $uploadDir = 'uploads/';
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item"> <a class="nav-link" href="#layanan-kami">Layanan Kami</a> </li>
                         <li class="nav-item"> <a class="nav-link" href="#sparepart-tersedia">Sparepart Tersedia</a> </li>
-                        <li class="nav-item"> <a class="nav-link" href="#tentang-kami">Tentang Thar'z Computer</a> </li>
-                        <li class="nav-item"> <a class="nav-link" href="#mengapa-memilih-kami">Mengapa Memilih Kami?</a> </li>
+                        <li class="nav-item"> <a class="nav-link" href="#tentang-kami">Tentang kami </a> </li>
+                        <li class="nav-item"> <a class="nav-link" href="#mengapa-memilih-kami">Mengapa Kami?</a> </li>
                         <li class="nav-item"> <a class="nav-link" href="#hubungi-kami">Hubungi Kami</a> </li>
                         <li class="nav-item"> <a class="btn btn-outline-light ms-lg-3" href="login.php">Login</a> </li>
                     </ul>

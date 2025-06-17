@@ -69,7 +69,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 // --- Ambil semua data jasa dari database ---
 $daftar_jasa = [];
 // DIUBAH: Query SELECT disesuaikan (tanpa deskripsi, menggunakan jenis_jasa)
-$sql = "SELECT id_jasa, jenis_jasa, harga FROM jasa ORDER BY jenis_jasa ASC";
+$sql = "SELECT id_jasa, jenis_jasa, harga FROM jasa ORDER BY jenis_jasa desc";
 $result = $koneksi->query($sql);
 if ($result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
