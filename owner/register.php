@@ -1,9 +1,7 @@
 <?php
 // register.php (MODIFIED WITH EDIT MODAL)
 session_start();
-// Harusnya include koneksi dari file terpisah, misalnya:
-// require '../koneksi.php';
-$koneksi = new mysqli("localhost", "root", "", "tharz_computer");
+include '../koneksi.php';
 
 // Cek koneksi
 if ($koneksi->connect_error) {

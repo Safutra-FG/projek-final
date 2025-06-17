@@ -1,7 +1,6 @@
 <?php
 session_start();
-// 1. Menggunakan file koneksi terpusat
-require '../koneksi.php'; 
+include '../koneksi.php';
 
 // Cek role harus owner (setelah koneksi berhasil)
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'owner') {

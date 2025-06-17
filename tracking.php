@@ -158,6 +158,16 @@ if ($id_service_input) {
                         $stmt_total_bayar->close();
                     }
                 }
+
+                // Tentukan status pembayaran berdasarkan total pembayaran vs total tagihan
+                if ($total_bayar >= $total_biaya_aktual_dari_detail && $total_biaya_aktual_dari_detail > 0) {
+                    $status_pembayaran = 'Lunas';
+                } elseif ($total_bayar > 0) {
+                    $status_pembayaran = 'DP';
+                } else {
+                    $status_pembayaran = 'Menunggu Pembayaran';
+                }
+
                 $service_info['status_pembayaran'] = $status_pembayaran;
                 $service_info['jumlah_bayar'] = $total_bayar;
                 $service_info['total_tagihan'] = $total_biaya_aktual_dari_detail;

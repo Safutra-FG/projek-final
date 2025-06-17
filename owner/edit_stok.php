@@ -1,7 +1,7 @@
 <?php
 session_start();
 // Gunakan koneksi terpusat, sama seperti stok.php
-require '../koneksi.php';
+include '../koneksi.php';
 
 // Cek koneksi
 if ($koneksi->connect_error) {

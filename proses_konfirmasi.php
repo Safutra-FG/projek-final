@@ -1,111 +1,113 @@
 <?php
-// Konfigurasi database
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'tharz_computer');
+include 'koneksi.php';
 
-// Fungsi untuk membuat koneksi database
-function connect_db() {
-    $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-    if ($conn->connect_error) {
-        error_log("Koneksi database gagal: " . $conn->connect_error);
-        die("Terjadi masalah koneksi database.");
+// Fungsi untuk validasi file
+function validateFile($file) {
+    $allowed_types = ['image/jpeg', 'image/png', 'application/pdf'];
+    $max_size = 5 * 1024 * 1024; // 5MB
+
+    if ($file['error'] !== 0) {
+        return "Terjadi kesalahan saat upload file.";
     }
-    return $conn;
+
+    if ($file['size'] > $max_size) {
+        return "Ukuran file terlalu besar. Maksimal 5MB.";
+    }
+
+    $file_type = mime_content_type($file['tmp_name']);
+    if (!in_array($file_type, $allowed_types)) {
+        return "Tipe file tidak didukung. Gunakan JPG, PNG, atau PDF.";
+    }
+
+    return null;
 }
 
-$message = '';
-$message_type = 'danger';
+// Fungsi untuk menyimpan file
+function saveFile($file, $id_service) {
+    $upload_dir = "uploads/bukti_pembayaran/" . date('Y/m');
+    if (!file_exists($upload_dir)) {
+        mkdir($upload_dir, 0777, true);
+    }
 
-if (isset($_POST['submit_konfirmasi'])) {
-    $koneksi = connect_db();
+    $file_extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $new_file_name = "bukti_" . $id_service . "_" . time() . "." . $file_extension;
+    $target_path = $upload_dir . "/" . $new_file_name;
 
-    // 1. Ambil dan bersihkan data dari form
-    $id_service = $koneksi->real_escape_string($_POST['id_service']);
-    $amount = $koneksi->real_escape_string($_POST['amount']);
-    $metode_transfer = $koneksi->real_escape_string($_POST['metode_transfer']);
-    $nama_pengirim = $koneksi->real_escape_string($_POST['nama_pengirim']);
+    if (move_uploaded_file($file['tmp_name'], $target_path)) {
+        return "uploads/bukti_pembayaran/" . date('Y/m') . "/" . $new_file_name;
+    }
 
-    // 2. Validasi dasar
-    if (empty($id_service) || empty($amount) || empty($metode_transfer) || empty($nama_pengirim)) {
-        $message = "Semua field harus diisi.";
-    } elseif (!isset($_FILES['bukti_pembayaran']) || $_FILES['bukti_pembayaran']['error'] != 0) {
-        $message = "Gagal mengunggah file. Pastikan Anda memilih file bukti pembayaran.";
+    return null;
+}
+
+$error_message = null;
+$success_message = null;
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_konfirmasi'])) {
+    $id_service = intval(trim($_POST['id_service']));
+    $amount = intval($_POST['amount']);
+    $metode_transfer = trim($_POST['metode_transfer']);
+    $nama_pengirim = trim($_POST['nama_pengirim']);
+
+    // Validasi input dasar
+    if (empty($id_service) || empty($metode_transfer) || empty($nama_pengirim)) {
+        $error_message = "Semua field harus diisi.";
     } else {
-        // 3. Proses unggah file
-        $target_dir = "uploads/bukti_pembayaran/";
-        if (!is_dir($target_dir)) {
-            mkdir($target_dir, 0755, true); // Buat folder jika belum ada
-        }
-        
-        $file = $_FILES['bukti_pembayaran'];
-        $file_name = $file['name'];
-        $file_tmp_name = $file['tmp_name'];
-        $file_size = $file['size'];
-        $file_error = $file['error'];
-        
-        $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-        $allowed_ext = ['jpg', 'jpeg', 'png', 'pdf'];
+        // Validasi file bukti pembayaran
+        if (!isset($_FILES['bukti_pembayaran'])) {
+            $error_message = "Bukti pembayaran harus diunggah.";
+        } else {
+            $file_error = validateFile($_FILES['bukti_pembayaran']);
+            if ($file_error) {
+                $error_message = $file_error;
+            } else {
+                // Simpan file
+                $path_bukti = saveFile($_FILES['bukti_pembayaran'], $id_service);
+                if (!$path_bukti) {
+                    $error_message = "Gagal menyimpan bukti pembayaran.";
+                } else {
+                    // Ambil id_customer dari service
+                    $sql_cust = "SELECT id_customer FROM service WHERE id_service = ?";
+                    $stmt_cust = $koneksi->prepare($sql_cust);
+                    $stmt_cust->bind_param("i", $id_service);
+                    $stmt_cust->execute();
+                    $stmt_cust->bind_result($id_customer);
+                    $stmt_cust->fetch();
+                    $stmt_cust->close();
 
-        if (in_array($file_ext, $allowed_ext)) {
-            if ($file_error === 0) {
-                if ($file_size <= 5000000) { // 5MB
-                    // Buat nama file baru yang unik untuk menghindari penimpaan file
-                    $new_file_name = "bukti_" . $id_service . "_" . time() . "." . $file_ext;
-                    $file_destination = $target_dir . $new_file_name;
-
-                    if (move_uploaded_file($file_tmp_name, $file_destination)) {
-                        
-                        // 4. Simpan ke database menggunakan prepared statements
+                    if (empty($id_customer)) {
+                        $error_message = "ID Customer tidak ditemukan untuk service ini.";
+                    } else {
+                        // Mulai transaksi database
                         $koneksi->begin_transaction();
                         try {
-                            // Masukkan ke tabel pembayaran
-                            $sql_insert = "INSERT INTO pembayaran (id_service, nama_pengirim, metode_transfer, jumlah_transfer, file_bukti) VALUES (?, ?, ?, ?, ?)";
-                            $stmt_insert = $koneksi->prepare($sql_insert);
-                            $stmt_insert->bind_param("sssds", $id_service, $nama_pengirim, $metode_transfer, $amount, $new_file_name);
-                            $stmt_insert->execute();
+                            // Insert ke tabel transaksi
+                            $sql_transaksi = "INSERT INTO transaksi (id_service, id_customer, jenis, status, tanggal, total) VALUES (?, ?, 'service', 'menunggu pembayaran', NOW(), ?)";
+                            $stmt_transaksi = $koneksi->prepare($sql_transaksi);
+                            $stmt_transaksi->bind_param("iii", $id_service, $id_customer, $amount);
+                            $stmt_transaksi->execute();
+                            $id_transaksi = $koneksi->insert_id;
+                            $stmt_transaksi->close();
 
-                            // =================================================================================
-                            // PERUBAHAN UTAMA DI SINI
-                            // Alih-alih mengubah status, kita TIDAK melakukan apa-apa pada status service.
-                            // Atau, jika status sebelumnya adalah 'Menunggu Pembayaran', kita ubah kembali ke 'Dikonfirmasi'.
-                            // Baris di bawah ini akan memastikan statusnya adalah 'Dikonfirmasi'.
-                            // =================================================================================
-                            $sql_update = "UPDATE service SET status = 'Dikonfirmasi' WHERE id_service = ?";
-                            $stmt_update = $koneksi->prepare($sql_update);
-                            $stmt_update->bind_param("s", $id_service);
-                            $stmt_update->execute();
-                            
+                            // Insert ke tabel bayar
+                            $sql_bayar = "INSERT INTO bayar (id_transaksi, tanggal, jumlah, metode, status, bukti, catatan) VALUES (?, NOW(), 0 , ?, 'menunggu konfirmasi', ?, ?)";
+                            $stmt_bayar = $koneksi->prepare($sql_bayar);
+                            $catatan = "Konfirmasi pembayaran dari " . $nama_pengirim . " via " . $metode_transfer;
+                            $stmt_bayar->bind_param("isss", $id_transaksi, $metode_transfer, $path_bukti, $catatan);
+                            $stmt_bayar->execute();
+                            $stmt_bayar->close();
+
                             $koneksi->commit();
-
-                            $message = "Konfirmasi pembayaran berhasil dikirim! ID Service Anda: " . htmlspecialchars($id_service) . ". Kami akan segera memprosesnya.";
-                            $message_type = 'success';
-
-                        } catch (mysqli_sql_exception $exception) {
+                            $success_message = "Konfirmasi pembayaran berhasil dikirim! Tim kami akan segera memverifikasi pembayaran Anda.";
+                        } catch (Exception $e) {
                             $koneksi->rollback();
-                            error_log("Database transaction failed: " . $exception->getMessage());
-                            $message = "Terjadi kesalahan pada database. Gagal menyimpan konfirmasi.";
+                            $error_message = "Terjadi kesalahan: " . $e->getMessage();
                         }
-
-                    } else {
-                        $message = "Gagal memindahkan file yang diunggah.";
                     }
-                } else {
-                    $message = "Ukuran file terlalu besar. Maksimal 5MB.";
                 }
-            } else {
-                $message = "Terjadi kesalahan saat mengunggah file.";
             }
-        } else {
-            $message = "Format file tidak diizinkan. Harap unggah file JPG, PNG, atau PDF.";
         }
     }
-    $koneksi->close();
-} else {
-    // Jika halaman diakses langsung tanpa submit form
-    header('Location: index.php');
-    exit();
 }
 ?>
 
@@ -113,33 +115,45 @@ if (isset($_POST['submit_konfirmasi'])) {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Status Konfirmasi Pembayaran</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Konfirmasi Pembayaran - Thar'z Computer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body class="bg-light">
-    <div class="container">
-        <div class="row justify-content-center align-items-center" style="min-height: 100vh;">
-            <div class="col-md-8 text-center">
-                <div class="card shadow-sm">
-                    <div class="card-body p-5">
-                        <div class="alert alert-<?php echo htmlspecialchars($message_type); ?>" role="alert">
-                            <h4 class="alert-heading">
-                                <?php echo ($message_type == 'success') ? '<i class="bi bi-check2-circle"></i> Berhasil!' : '<i class="bi bi-exclamation-triangle"></i> Gagal!'; ?>
-                            </h4>
-                            <p><?php echo htmlspecialchars($message); ?></p>
-                        </div>
-                        <hr>
-                        <p class="mb-0">Anda dapat melacak status service Anda melalui halaman Tracking.</p>
-                        <div class="mt-4">
-                            <a href="tracking.php?id_service=<?php echo htmlspecialchars(isset($_POST['id_service']) ? $_POST['id_service'] : ''); ?>" class="btn btn-primary"><i class="bi bi-search"></i> Lacak Status Service</a>
-                            <a href="index.php" class="btn btn-secondary"><i class="bi bi-house"></i> Kembali ke Beranda</a>
-                        </div>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="bi bi-check-circle"></i> Status Konfirmasi Pembayaran</h4>
+                    </div>
+                    <div class="card-body">
+                        <?php if ($error_message): ?>
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle-fill"></i> <?php echo htmlspecialchars($error_message); ?>
+                            </div>
+                            <div class="text-center mt-4">
+                                <a href="javascript:history.back()" class="btn btn-secondary">
+                                    <i class="bi bi-arrow-left"></i> Kembali
+                                </a>
+                            </div>
+                        <?php elseif ($success_message): ?>
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle-fill"></i> <?php echo htmlspecialchars($success_message); ?>
+                            </div>
+                            <div class="text-center mt-4">
+                                <a href="index.php" class="btn btn-primary">
+                                    <i class="bi bi-house"></i> Kembali ke Beranda
+                                </a>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

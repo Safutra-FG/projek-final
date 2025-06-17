@@ -1,6 +1,6 @@
 <?php
 session_start();
-require '../koneksi.php'; // Menyertakan file koneksi database
+include '../koneksi.php'; // Menyertakan file koneksi database
 
 // --- OTENTIKASI & OTORISASI ---
 // (Asumsi role 'owner' untuk pengembangan)

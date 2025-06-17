@@ -1,5 +1,6 @@
 <?php
 session_start();
+include '../koneksi.php';
 // Autentikasi: hanya user dengan role teknisi yang boleh mengakses
 if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'teknisi') {
     header("Location: ../login.php");
