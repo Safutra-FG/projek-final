@@ -20,8 +20,6 @@ if (isset($_GET['id_service']) && isset($_GET['amount'])) {
     } elseif ($amount_to_pay === false || $amount_to_pay < 0) {
         $error_message = "Jumlah tagihan tidak valid.";
     } else {
-        $koneksi = mysqli_connect("localhost", "root", "", "revisi");
-
         // 2. Ambil data service dan customer
         $sql = "SELECT s.id_service, s.device, c.nama_customer
                 FROM service s

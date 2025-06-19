@@ -145,6 +145,105 @@ $namaAkun = "Customer";
         .slider-btn:hover { background-color: #155cb0; }
         .slider-btn:disabled { background-color: #a0aec0; cursor: not-allowed; opacity: 0.7; }
         #slide-counter { font-weight: 600; color: #2d3748; }
+
+        /* Tambahan untuk tampilan mobile */
+        @media (max-width: 600px) {
+            .container-wrapper {
+                padding: 5px;
+                box-shadow: none;
+                border-radius: 0;
+            }
+            .product-list {
+                min-height: unset;
+                padding: 0;
+            }
+            .product-grid-slide {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 10px !important;
+            }
+            .product-item {
+                padding: 8px 3px;
+                border-radius: 10px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+                margin: 0;
+            }
+            .product-image-container {
+                width: 100%;
+                height: 100px;
+                margin-bottom: 6px;
+                border-radius: 8px;
+            }
+            .product-image {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            .product-info {
+                margin-bottom: 6px;
+            }
+            .product-name {
+                font-size: 0.98rem;
+                margin-bottom: 2px;
+                font-weight: 600;
+                text-align: center;
+            }
+            .product-price {
+                font-size: 1rem;
+                margin-bottom: 2px;
+                text-align: center;
+            }
+            .text-gray-600 {
+                font-size: 0.8rem;
+                text-align: center;
+            }
+            .quantity-control {
+                margin: 0 auto 6px auto;
+                width: 100%;
+                justify-content: center;
+            }
+            .quantity-btn {
+                width: 28px;
+                height: 28px;
+                font-size: 1rem;
+            }
+            .quantity-input {
+                width: 32px;
+                height: 28px;
+                font-size: 1rem;
+            }
+            #buy-btn, .slider-btn {
+                width: 100%;
+                font-size: 1rem;
+                padding: 8px 0;
+                margin: 0;
+            }
+            .slider-nav {
+                gap: 6px;
+                margin-top: 8px;
+            }
+            .back-to-dashboard-btn-wrapper, .header-section, .header-right, .header-left, .filter-controls {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 4px !important;
+            }
+            .search-box, .category-filter {
+                width: 100% !important;
+            }
+            .customer-name {
+                text-align: right;
+                margin-top: 2px;
+            }
+            #cart-box, .total-price-display {
+                font-size: 1rem;
+                padding: 8px;
+            }
+            .total-price-display {
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 0;
+            }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-100 to-indigo-50">

@@ -108,3 +108,29 @@
 2025-06-17 15:34:31 - Number of rows found for cart items (proses_konfirmasi_barang): 2 out of 2
 2025-06-17 15:34:31 - Found item in DB (proses_konfirmasi_barang): {"id_barang":10,"harga":300000}
 2025-06-17 15:34:31 - Found item in DB (proses_konfirmasi_barang): {"id_barang":20,"harga":250000}
+2025-06-19 10:15:09 - Cart contents (Display): {"27":2,"28":1,"10":3,"18":1}
+2025-06-19 10:15:09 - Item IDs from cart (Display): [27,28,10,18]
+2025-06-19 10:15:09 - Found item for display in DB: {"id_barang":10,"nama_barang":"Samsung SSD 2.5 inch SATA 256GB","harga":300000}
+2025-06-19 10:15:09 - Found item for display in DB: {"id_barang":18,"nama_barang":"V-GeN SSD M.2 NVMe 512GB","harga":650000}
+2025-06-19 10:15:09 - Found item for display in DB: {"id_barang":27,"nama_barang":"Acer motherboard","harga":900000}
+2025-06-19 10:15:09 - Found item for display in DB: {"id_barang":28,"nama_barang":"Lenovo motherboard","harga":950000}
+2025-06-19 10:24:16 - Cart contents (Display): {"15":1}
+2025-06-19 10:24:16 - Item IDs from cart (Display): [15]
+2025-06-19 10:24:16 - Found item for display in DB: {"id_barang":15,"nama_barang":"Samsung SSD M.2 NVMe 1TB","harga":1000000}
+2025-06-19 17:23:40 - Cart contents (Display): {"15":1,"8":1}
+2025-06-19 17:23:40 - Item IDs from cart (Display): [15,8]
+2025-06-19 17:23:40 - Found item for display in DB: {"id_barang":8,"nama_barang":"keyboard (s)","harga":240000}
+2025-06-19 17:24:05 - Cart contents (proses_konfirmasi_barang): {"15":1,"8":1}
+2025-06-19 17:24:05 - Item IDs from cart (proses_konfirmasi_barang): [15,8]
+2025-06-19 17:24:05 - Number of rows found for cart items (proses_konfirmasi_barang): 1 out of 2
+2025-06-19 17:24:05 - Missing item IDs (proses_konfirmasi_barang): [15]
+2025-06-19 17:24:05 - Error in proses_konfirmasi_barang: Beberapa item di keranjang tidak ditemukan di database.
+2025-06-19 17:24:05 - Cart contents (Display): {"15":1,"8":1}
+2025-06-19 17:24:05 - Item IDs from cart (Display): [15,8]
+2025-06-19 17:24:05 - Found item for display in DB: {"id_barang":8,"nama_barang":"keyboard (s)","harga":240000}
+2025-06-19 17:24:08 - Cart contents (Display): {"15":1,"8":1}
+2025-06-19 17:24:08 - Item IDs from cart (Display): [15,8]
+2025-06-19 17:24:08 - Found item for display in DB: {"id_barang":8,"nama_barang":"keyboard (s)","harga":240000}
+2025-06-19 17:24:19 - Cart contents (Display): {"15":1,"9":1}
+2025-06-19 17:24:19 - Item IDs from cart (Display): [15,9]
+2025-06-19 17:24:19 - Found item for display in DB: {"id_barang":9,"nama_barang":"keyboard (l)","harga":280000}

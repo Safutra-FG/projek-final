@@ -65,7 +65,8 @@ if (isset($_POST['submit'])) {
 
         // 2. Jika input customer berhasil, lanjutkan ke tabel service
         if ($success) {
-            $tanggal = date('Y-m-d');
+            $tanggal = date('Y-m-d  H:i:s');
+            
             $stmtService = mysqli_prepare($koneksi, "INSERT INTO service (id_customer, tanggal, device, keluhan) VALUES (?, ?, ?, ?)");
             if ($stmtService) {
                 mysqli_stmt_bind_param($stmtService, "isss", $id_customer, $tanggal, $device, $keluhan);

@@ -13,6 +13,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $keluhan = $_POST['keluhan'];
     $status = 'diajukan';
     $tanggal = date('Y-m-d H:i:s');
+    $estimasi_harga = 0; // default estimasi harga jika belum ada
 
     // Cek apakah customer sudah ada
     $check_sql = "SELECT id_customer FROM customer WHERE nama_customer = ? AND no_telepon = ?";
@@ -50,7 +51,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
     if ($stmt->execute()) {
         echo "<script>
-                alert('Service berhasil ditambahkan!');
+                alert('Service berhasil ditambahkan!'); 
                 window.location.href = 'dashboard.php';
               </script>";
     } else {

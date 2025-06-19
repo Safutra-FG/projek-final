@@ -429,64 +429,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <div class="flex min-h-screen">
 
-        <div class="w-64 bg-gray-800 shadow-lg flex flex-col justify-between py-6">
-            <div>
-                <div class="flex flex-col items-center mb-10">
-                    <img src="../icons/logo.png" alt="Logo" class="w-16 h-16 rounded-full mb-3 border-2 border-blue-400">
-                    <h1 class="text-2xl font-extrabold text-white text-center">Thar'z Computer</h1>
-                    <p class="text-sm text-gray-400">Admin Panel</p>
-                </div>
-
-                <ul class="px-6 space-y-3">
-                    <li>
-                        <a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">🏠</span>
-                            <span class="font-medium">Dashboard</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="pembayaran_service.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">💰</span>
-                            <span class="font-medium">Pembayaran Service</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="kelola_penjualan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300  hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">💰</span>
-                            <span class="font-medium">Kelola Penjualan</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="data_service.php" class="flex items-center space-x-3 p-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition duration-200">
-                            <span class="text-xl">📝</span>
-                            <span class="font-medium">Data Service</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="data_pelanggan.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">👥</span>
-                            <span class="font-medium">Data Pelanggan</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="riwayat_transaksi.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">💳</span>
-                            <span class="font-medium">Riwayat Transaksi</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="stok_gudang.php" class="flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition duration-200">
-                            <span class="text-xl">📦</span>
-                            <span class="font-medium">Stok Gudang</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="p-4 border-t border-gray-700 text-center text-sm text-gray-400">
-                &copy; Thar'z Computer 2025
-            </div>
-        </div>
+        <?php 
+            include 'includes/sidebar.php';
+        ?>
 
         <div class="flex-1 flex flex-col">
 
@@ -559,6 +504,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                         <span class="text-gray-500">Estimasi Harga:</span>
                                         <p class="font-semibold text-gray-900">Rp <?php echo number_format($service['estimasi_harga'], 0, ',', '.'); ?></p>
                                     </div>
+                                </div>
+                                <div class="mt-6 flex flex-wrap gap-3">
+                                    <!-- Tombol Cetak Nota Service -->
+                                    <a href="cetak_nota_service.php?id_service=<?php echo $id_service; ?>" target="_blank" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200 text-sm font-medium">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm0 2h12v12H4V5zm2 2v2h8V7H6zm0 4v2h5v-2H6z" /></svg>
+                                        Cetak Nota Service
+                                    </a>
                                 </div>
                             </div>
 

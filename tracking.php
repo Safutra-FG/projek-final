@@ -259,7 +259,12 @@ if ($id_service_input) {
                     </div>
                     <div class="status-box" style="padding: 10px; margin-top: 15px; margin-bottom: 15px;">
                         <div class="status-title" style="font-size: 1rem;">Status Service</div>
-                        <div class="status-value" style="font-size: 1.2rem;"><?php echo htmlspecialchars($service_info['status']); ?></div>
+                            <div class="status-value" style="font-size: 1.2rem;">
+                            <?php echo htmlspecialchars($service_info['status']); ?>
+                            <?php if (strtolower($service_info['status']) == 'diajukan' && !empty($service_info['tanggal'])): ?>
+                                <br><span id="countdown-waktu" style="font-size:0.95rem;color:#dc3545;"></span>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
                     <?php if (strtolower($service_info['status']) == 'menunggu konfirmasi'): ?>
@@ -435,10 +440,57 @@ if ($id_service_input) {
     }
     ?>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         function bayar(idService, amountToPay) {
             window.location.href = 'transaksi_service.php?id_service=' + encodeURIComponent(idService) + '&amount=' + amountToPay;
         }
+
+        <?php if (strtolower($service_info['status']) == 'diajukan' && !empty($service_info['tanggal'])): ?>
+            var waktuDiajukan = <?php echo strtotime($service_info['tanggal']) * 1000; ?>;
+            var batas = 2 * 60 * 60 * 1000; // 2 jam dalam ms
+            var waktuAkhir = waktuDiajukan + batas;
+            var countdownEl = document.getElementById('countdown-waktu');
+            function updateCountdown() {
+                var now = new Date().getTime();
+                var sisa = waktuAkhir - now;
+                if (sisa > 0) {
+                    var jam = Math.floor(sisa / (1000 * 60 * 60));
+                    var menit = Math.floor((sisa % (1000 * 60 * 60)) / (1000 * 60));
+                    var detik = Math.floor((sisa % (1000 * 60)) / 1000);
+                    countdownEl.innerHTML = 'Harap datang ke konter sebelum: ' + jam + ' jam ' + menit + ' menit ';
+                } else {
+                    countdownEl.innerHTML = 'Waktu habis, data akan dihapus.';
+                }
+            }
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+        <?php endif; ?>
+
+        // Polling AJAX untuk update status service
+        var idService = '<?php echo $service_info['id_service']; ?>';
+        function pollingStatus() {
+            $.get('tracking_status_api.php', {id_service: idService}, function(data) {
+                if (data && data.status) {
+                    var statusBar = document.querySelector('.status-value');
+                    if (statusBar) {
+                        statusBar.innerHTML = data.status;
+                        // Jika status berubah dari diajukan ke status lain, hapus countdown
+                        if (data.status.toLowerCase() !== 'diajukan') {
+                            var countdown = document.getElementById('countdown-waktu');
+                            if (countdown) countdown.style.display = 'none';
+                        } else if (data.tanggal) {
+                            // Jika status tetap diajukan, update countdown dengan waktu baru jika ada perubahan
+                            waktuDiajukan = parseInt(data.tanggal) * 1000;
+                            waktuAkhir = waktuDiajukan + batas;
+                            var countdown = document.getElementById('countdown-waktu');
+                            if (countdown) countdown.style.display = '';
+                        }
+                    }
+                }
+            }, 'json');
+        }
+        setInterval(pollingStatus, 10000); // polling setiap 10 detik
     </script>
 </body>
 

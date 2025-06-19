@@ -250,6 +250,49 @@ $uploadDir = 'uploads/';
             text-align: center;
             margin-top: auto;
         }
+
+        /* === HERO MENU SEGITIGA UNTUK MOBILE === */
+        @media (max-width: 767.98px) {
+            .hero-menu-row-fix {
+                display: flex !important;
+                flex-wrap: wrap;
+                flex-direction: row;
+                gap: 0.3rem 0;
+                justify-content: center;
+            }
+            .hero-menu-box {
+                padding-left: 2px !important;
+                padding-right: 2px !important;
+            }
+            #menu-service, #menu-tracking {
+                width: 50%;
+                max-width: 50%;
+                order: 1;
+            }
+            #menu-sparepart {
+                width: 65%;
+                max-width: 65%;
+                margin-left: auto;
+                margin-right: auto;
+                order: 2;
+            }
+            .box-link {
+                min-height: 140px;
+                padding: 12px 6px;
+                font-size: 0.95rem;
+            }
+            .box-link i {
+                font-size: 2.2rem;
+                margin-bottom: 7px;
+            }
+            .box-link .menu-title {
+                font-size: 1.05rem;
+                margin-bottom: 4px;
+            }
+            .box-link .menu-description {
+                font-size: 0.78rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -284,10 +327,16 @@ $uploadDir = 'uploads/';
             
             <div class="hero-menu-container" id="layanan-kami">
                 <div class="container">
-                    <div class="row row-cols-1 row-cols-md-3 g-4 justify-content-center">
-                        <div class="col"> <a href="service.php" class="box-link"> <i class="fas fa-tools"></i> <div class="menu-title">Service</div> <div class="menu-description">Ajukan perbaikan atau perawatan perangkat Anda dengan mudah.</div> </a> </div>
-                        <div class="col"> <a href="tracking.php" class="box-link"> <i class="fas fa-search-location"></i> <div class="menu-title">Tracking</div> <div class="menu-description">Lacak status perbaikan perangkat Anda secara real-time.</div> </a> </div>
-                        <div class="col"> <a href="barang.php" class="box-link"> <i class="fas fa-microchip"></i> <div class="menu-title">Pembelian Sparepart</div> <div class="menu-description">Lihat dan beli komponen komputer berkualitas tinggi.</div> </a> </div>
+                    <div class="row row-cols-1 row-cols-md-3 g-4 justify-content-center hero-menu-row-fix">
+                        <div class="col hero-menu-box" id="menu-service">
+                            <a href="service.php" class="box-link"> <i class="fas fa-tools"></i> <div class="menu-title">Service</div> <div class="menu-description">Ajukan perbaikan atau perawatan perangkat Anda dengan mudah.</div> </a>
+                        </div>
+                        <div class="col hero-menu-box" id="menu-tracking">
+                            <a href="tracking.php" class="box-link"> <i class="fas fa-search-location"></i> <div class="menu-title">Tracking</div> <div class="menu-description">Lacak status perbaikan perangkat Anda secara real-time.</div> </a>
+                        </div>
+                        <div class="col hero-menu-box" id="menu-sparepart">
+                            <a href="barang.php" class="box-link"> <i class="fas fa-microchip"></i> <div class="menu-title">Pembelian Sparepart</div> <div class="menu-description">Lihat dan beli komponen komputer berkualitas tinggi.</div> </a>
+                        </div>
                     </div>
                 </div>
             </div>

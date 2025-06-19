@@ -9,9 +9,29 @@ $items_per_page = 7;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $items_per_page;
 
+// Ambil keyword pencarian jika ada
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$where_clause = '';
+$params = [];
+$param_types = '';
+if ($search !== '') {
+    $where_clause = "WHERE nama_barang LIKE CONCAT('%', ?, '%') OR id_barang LIKE CONCAT('%', ?, '%')";
+    $params[] = $search;
+    $params[] = $search;
+    $param_types = 'ss';
+}
+
 // Hitung total data
-$total_query = "SELECT COUNT(*) as total FROM stok";
-$total_result = $koneksi->query($total_query);
+$total_query = "SELECT COUNT(*) as total FROM stok $where_clause";
+if ($where_clause !== '') {
+    $stmt_total = $koneksi->prepare($total_query);
+    $stmt_total->bind_param($param_types, ...$params);
+    $stmt_total->execute();
+    $total_result = $stmt_total->get_result();
+    $stmt_total->close();
+} else {
+    $total_result = $koneksi->query($total_query);
+}
 $total_row = $total_result->fetch_assoc();
 $total_items = $total_row['total'];
 $total_pages = ceil($total_items / $items_per_page);
@@ -42,9 +62,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_stok'])) {
 }
 
 // Query untuk mengambil data dengan limit
-$sql = "SELECT id_barang, nama_barang, stok, harga FROM stok ORDER BY id_barang DESC LIMIT ? OFFSET ? ";
-$stmt = $koneksi->prepare($sql);
-$stmt->bind_param("ii", $items_per_page, $offset);
+$sql = "SELECT id_barang, nama_barang, stok, harga FROM stok $where_clause ORDER BY id_barang DESC LIMIT ? OFFSET ? ";
+if ($where_clause !== '') {
+    $stmt = $koneksi->prepare($sql);
+    $param_types2 = $param_types . 'ii';
+    $params2 = array_merge($params, [$items_per_page, $offset]);
+    $stmt->bind_param($param_types2, ...$params2);
+} else {
+    $stmt = $koneksi->prepare($sql);
+    $stmt->bind_param("ii", $items_per_page, $offset);
+}
 $stmt->execute();
 $result = $stmt->get_result();
 ?>
@@ -144,6 +171,10 @@ $result = $stmt->get_result();
 
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <h2 class="text-xl font-semibold mb-4 text-gray-700">Daftar Stok Barang</h2>
+                    <form method="GET" class="mb-4 flex flex-wrap items-center gap-4">
+                        <input type="text" name="search" placeholder="Cari nama atau ID barang..." value="<?php echo htmlspecialchars($search); ?>" class="px-3 py-2 border rounded-md text-sm bg-gray-100 focus:ring-blue-500 focus:border-blue-500 focus:outline-none" style="min-width:220px;">
+                        <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-200 text-sm font-medium">Cari</button>
+                    </form>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 border border-gray-300 table-auto-layout">
                             <thead class="bg-gray-50">
@@ -183,17 +214,17 @@ $result = $stmt->get_result();
                     <div class="mt-4 flex justify-center">
                         <div class="flex space-x-2">
                             <?php if ($page > 1) : ?>
-                                <a href="?page=<?php echo $page - 1; ?>" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">&laquo; Sebelumnya</a>
+                                <a href="?page=<?php echo $page - 1; ?><?php echo $search !== '' ? '&search=' . urlencode($search) : ''; ?>" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">&laquo; Sebelumnya</a>
                             <?php endif; ?>
 
                             <?php for ($i = 1; $i <= $total_pages; $i++) : ?>
-                                <a href="?page=<?php echo $i; ?>" class="px-3 py-1 <?php echo $i === $page ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'; ?> rounded-md transition duration-200">
+                                <a href="?page=<?php echo $i; ?><?php echo $search !== '' ? '&search=' . urlencode($search) : ''; ?>" class="px-3 py-1 <?php echo $i === $page ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'; ?> rounded-md transition duration-200">
                                     <?php echo $i; ?>
                                 </a>
                             <?php endfor; ?>
 
                             <?php if ($page < $total_pages) : ?>
-                                <a href="?page=<?php echo $page + 1; ?>" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">Selanjutnya &raquo;</a>
+                                <a href="?page=<?php echo $page + 1; ?><?php echo $search !== '' ? '&search=' . urlencode($search) : ''; ?>" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">Selanjutnya &raquo;</a>
                             <?php endif; ?>
                         </div>
                     </div>

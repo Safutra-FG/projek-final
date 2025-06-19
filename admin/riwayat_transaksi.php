@@ -6,11 +6,23 @@ $namaAkun = getNamaUser();
 
 // Logika untuk filtering bulan (jika ada) akan tetap di sini
 $bulan_filter = $_GET['bulan'] ?? date('Y-m'); // Default bulan saat ini (YYYY-MM)
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
 // Konfigurasi pagination
 $items_per_page = 7;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $items_per_page;
+
+// Siapkan bagian WHERE untuk pencarian
+$where_search = '';
+$param_types = 's';
+$params = [$bulan_filter];
+if ($search !== '') {
+    $where_search = " AND (c.nama_customer LIKE CONCAT('%', ?, '%') OR t.id_transaksi LIKE CONCAT('%', ?, '%'))";
+    $param_types .= 'ss';
+    $params[] = $search;
+    $params[] = $search;
+}
 
 $sql_transaksi = "
     WITH RankedTransaksi AS (
@@ -42,6 +54,7 @@ $sql_transaksi = "
             customer c ON t.id_customer = c.id_customer
         WHERE
             DATE_FORMAT(t.tanggal, '%Y-%m') = ?
+            $where_search
     ),
     FilteredTransaksi AS (
         SELECT
@@ -66,10 +79,15 @@ $sql_transaksi = "
     LIMIT ? OFFSET ?;
 ";
 
+// Siapkan parameter untuk bind_param
+$param_types .= 'ii';
+$params[] = $items_per_page;
+$params[] = $offset;
+
 $stmt_transaksi = $koneksi->prepare($sql_transaksi);
 
 if ($stmt_transaksi) {
-    $stmt_transaksi->bind_param("sii", $bulan_filter, $items_per_page, $offset);
+    $stmt_transaksi->bind_param($param_types, ...$params);
     $stmt_transaksi->execute();
     $result_transaksi = $stmt_transaksi->get_result();
     
@@ -129,9 +147,10 @@ $koneksi->close(); // Tutup koneksi setelah semua data diambil
 
                 <div class="bg-white p-6 rounded-lg shadow-md mb-8">
                     <h2 class="text-xl font-semibold mb-4 text-gray-700">Filter Riwayat</h2>
-                    <form action="" method="GET" class="flex items-center space-x-4">
+                    <form action="" method="GET" class="flex flex-wrap items-center gap-4">
                         <label for="bulan" class="text-sm font-medium text-gray-700">Riwayat Transaksi Bulan:</label>
                         <input type="month" id="bulan" name="bulan" value="<?php echo htmlspecialchars($bulan_filter); ?>" class="px-3 py-2 border rounded-md text-sm bg-gray-100 focus:ring-blue-500 focus:border-blue-500 focus:outline-none">
+                        <input type="text" name="search" placeholder="Cari nama pelanggan atau ID transaksi..." value="<?php echo htmlspecialchars($search); ?>" class="px-3 py-2 border rounded-md text-sm bg-gray-100 focus:ring-blue-500 focus:border-blue-500 focus:outline-none" style="min-width:220px;">
                         <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-200 text-sm font-medium">Filter</button>
                     </form>
                 </div>
@@ -196,17 +215,17 @@ $koneksi->close(); // Tutup koneksi setelah semua data diambil
                     <div class="mt-4 flex justify-center">
                         <div class="flex space-x-2">
                             <?php if ($page > 1) : ?>
-                                <a href="?page=<?php echo $page - 1; ?>&bulan=<?php echo urlencode($bulan_filter); ?>" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">&laquo; Sebelumnya</a>
+                                <a href="?page=<?php echo $page - 1; ?>&bulan=<?php echo urlencode($bulan_filter); ?><?php echo $search !== '' ? '&search=' . urlencode($search) : ''; ?>" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">&laquo; Sebelumnya</a>
                             <?php endif; ?>
 
                             <?php for ($i = 1; $i <= $total_pages; $i++) : ?>
-                                <a href="?page=<?php echo $i; ?>&bulan=<?php echo urlencode($bulan_filter); ?>" class="px-3 py-1 <?php echo $i === $page ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'; ?> rounded-md transition duration-200">
+                                <a href="?page=<?php echo $i; ?>&bulan=<?php echo urlencode($bulan_filter); ?><?php echo $search !== '' ? '&search=' . urlencode($search) : ''; ?>" class="px-3 py-1 <?php echo $i === $page ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'; ?> rounded-md transition duration-200">
                                     <?php echo $i; ?>
                                 </a>
                             <?php endfor; ?>
 
                             <?php if ($page < $total_pages) : ?>
-                                <a href="?page=<?php echo $page + 1; ?>&bulan=<?php echo urlencode($bulan_filter); ?>" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">Selanjutnya &raquo;</a>
+                                <a href="?page=<?php echo $page + 1; ?>&bulan=<?php echo urlencode($bulan_filter); ?><?php echo $search !== '' ? '&search=' . urlencode($search) : ''; ?>" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">Selanjutnya &raquo;</a>
                             <?php endif; ?>
                         </div>
                     </div>

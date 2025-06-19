@@ -2,6 +2,32 @@
 include '../koneksi.php';
 include 'auth.php';
 
+// Hapus otomatis service yang statusnya 'diajukan' dan waktu_diajukan lebih dari 2 jam
+$now = date('Y-m-d H:i:s');
+$sql_hapus = "DELETE FROM service WHERE status = 'diajukan' AND tanggal IS NOT NULL AND TIMESTAMPDIFF(HOUR, tanggal, '$now') >= 2";
+$koneksi->query($sql_hapus);
+
+// Pagination config
+$items_per_page = 6;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+$offset = ($page - 1) * $items_per_page;
+
+// Ambil keyword pencarian jika ada
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$where_clause = '';
+if ($search !== '') {
+    $search_escaped = $koneksi->real_escape_string($search);
+    $where_clause = "WHERE customer.nama_customer LIKE '%$search_escaped%' OR service.device LIKE '%$search_escaped%' OR service.keluhan LIKE '%$search_escaped%'";
+}
+
+// Hitung total data (untuk pagination)
+$total_query = "SELECT COUNT(*) as total FROM service JOIN customer ON service.id_customer = customer.id_customer $where_clause";
+$total_result = $koneksi->query($total_query);
+$total_row = $total_result->fetch_assoc();
+$total_items = $total_row['total'];
+$total_pages = ceil($total_items / $items_per_page);
+
 // Pastikan fungsi ini ada di auth.php atau sesuaikan
 if (function_exists('getNamaUser')) {
     $namaAkun = getNamaUser();
@@ -73,6 +99,13 @@ if (function_exists('getNamaUser')) {
 
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <h2 class="text-xl font-semibold mb-4 text-gray-700">Daftar Data Service</h2>
+                    <!-- Form Pencarian -->
+                    <div class="mb-4">
+                        <form method="GET" class="flex gap-2">
+                            <input type="text" name="search" placeholder="Cari nama customer, device, atau keluhan..." class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?php echo htmlspecialchars($search); ?>">
+                            <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-200">Cari</button>
+                        </form>
+                    </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
                             <thead class="bg-gray-50">
@@ -87,7 +120,8 @@ if (function_exists('getNamaUser')) {
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <?php
-                                $sql = "SELECT service.*, customer.nama_customer FROM service JOIN customer ON service.id_customer = customer.id_customer ORDER BY id_service DESC";
+                                // Query utama dengan pagination dan pencarian
+                                $sql = "SELECT service.*, customer.nama_customer FROM service JOIN customer ON service.id_customer = customer.id_customer $where_clause ORDER BY id_service DESC LIMIT $offset, $items_per_page";
                                 $result = $koneksi->query($sql);
 
                                 if ($result->num_rows > 0) {
@@ -127,7 +161,22 @@ if (function_exists('getNamaUser')) {
                                                 $statusClass = 'bg-gray-100 text-gray-800';
                                                 break;
                                         }
-                                        echo "<span class='px-2 inline-flex text-xs leading-5 font-semibold rounded-full " . $statusClass . "'>" . ucfirst(htmlspecialchars($row['status'])) . "</span>";
+                                        echo "<span class='px-2 inline-flex text-xs leading-5 font-semibold rounded-full $statusClass'>" . ucfirst(htmlspecialchars($row['status'])) . "</span>";
+                                        // Jika status diajukan, tampilkan sisa waktu tunggu
+                                        if ($row['status'] == 'diajukan' && !empty($row['tanggal'])) {
+                                            $tanggal = strtotime($row['tanggal']);
+                                            $waktu_sekarang = time();
+                                            $batas = 2 * 3600; // 2 jam dalam detik
+                                            $sisa = ($tanggal + $batas) - $waktu_sekarang;
+                                            if ($sisa > 0) {
+                                                $jam = floor($sisa / 3600);
+                                                $menit = floor(($sisa % 3600) / 60);
+                                                $detik = $sisa % 60;
+                                                echo "<br><span class='text-xs text-red-500'>Sisa waktu: {$jam}j {$menit}m {$detik}d</span>";
+                                            } else {
+                                                echo "<br><span class='text-xs text-red-500'>Waktu habis, akan dihapus...</span>";
+                                            }
+                                        }
                                         echo "</td>";
                                         echo "<td class='px-6 py-4 whitespace-nowrap text-sm text-center space-x-2'>";
                                         if ($row['status'] == 'menunggu konfirmasi') {
@@ -157,6 +206,22 @@ if (function_exists('getNamaUser')) {
                             </tbody>
                         </table>
                     </div>
+                    <!-- Pagination -->
+                    <?php if ($total_pages > 1): ?>
+                        <div class="mt-4 flex justify-center">
+                            <div class="flex space-x-2">
+                                <?php if ($page > 1): ?>
+                                    <a href="?page=<?php echo $page - 1; ?><?php echo $search !== '' ? '&search=' . urlencode($search) : ''; ?>" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">&larr; Sebelumnya</a>
+                                <?php endif; ?>
+                                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                                    <a href="?page=<?php echo $i; ?><?php echo $search !== '' ? '&search=' . urlencode($search) : ''; ?>" class="px-4 py-2 <?php echo $i === $page ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'; ?> rounded-md hover:bg-gray-300 transition duration-200"><?php echo $i; ?></a>
+                                <?php endfor; ?>
+                                <?php if ($page < $total_pages): ?>
+                                    <a href="?page=<?php echo $page + 1; ?><?php echo $search !== '' ? '&search=' . urlencode($search) : ''; ?>" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">Selanjutnya &rarr;</a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
