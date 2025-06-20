@@ -340,6 +340,75 @@ if ($id_service_dipilih) {
 // Cek jika ada pembayaran pending
 $pending = !empty($pembayaran_pending) ? $pembayaran_pending[0] : null;
 
+// --- Tambahan: Daftar Pembayaran Service dengan Filter Status ---
+$status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'menunggu konfirmasi';
+$daftar_pembayaran_service = [];
+
+// --- Pagination untuk daftar pembayaran service ---
+$items_per_page = 5;
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$offset = ($page - 1) * $items_per_page;
+
+// Hitung total data untuk pagination
+$sql_count = "SELECT COUNT(*) as total FROM transaksi t WHERE t.jenis = 'service' AND t.status = ?";
+$stmt_count = $koneksi->prepare($sql_count);
+$stmt_count->bind_param("s", $status_filter);
+$stmt_count->execute();
+$result_count = $stmt_count->get_result();
+$total_items = ($row = $result_count->fetch_assoc()) ? $row['total'] : 0;
+$stmt_count->close();
+$total_pages = ceil($total_items / $items_per_page);
+
+// Query data dengan LIMIT dan OFFSET
+$sql_daftar_service = "SELECT 
+    t.id_transaksi, 
+    t.id_service,
+    c.nama_customer, 
+    t.tanggal AS tanggal_pesan, 
+    t.total AS total_tagihan,
+    t.status AS status_transaksi_utama,
+    b_latest.id_bayar, 
+    b_latest.metode, 
+    b_latest.bukti, 
+    b_latest.catatan AS catatan_bayar,
+    b_latest.status AS status_konfirmasi_bayar
+FROM 
+    transaksi t
+JOIN 
+    customer c ON t.id_customer = c.id_customer
+LEFT JOIN (
+    SELECT
+        id_transaksi,
+        id_bayar,
+        metode,
+        bukti,
+        catatan,
+        status,
+        ROW_NUMBER() OVER(PARTITION BY id_transaksi ORDER BY tanggal DESC, id_bayar DESC) as rn
+    FROM
+        bayar
+) AS b_latest ON t.id_transaksi = b_latest.id_transaksi AND b_latest.rn = 1
+WHERE 
+    t.jenis = 'service' 
+    AND t.status = ?
+ORDER BY 
+    t.tanggal ASC
+LIMIT ? OFFSET ?";
+
+$stmt_service = $koneksi->prepare($sql_daftar_service);
+if ($stmt_service) {
+    $stmt_service->bind_param("sii", $status_filter, $items_per_page, $offset);
+    $stmt_service->execute();
+    $result_service = $stmt_service->get_result();
+    $daftar_pembayaran_service = [];
+    while ($row = $result_service->fetch_assoc()) {
+        $daftar_pembayaran_service[] = $row;
+    }
+    $stmt_service->close();
+} else {
+    $error_db = "Gagal menyiapkan query daftar pembayaran service: " . $koneksi->error;
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -515,6 +584,92 @@ $pending = !empty($pembayaran_pending) ? $pembayaran_pending[0] : null;
                     <?php endif; ?>
 
                 <?php endif; ?>
+
+                <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-700">Lihat Daftar Pembayaran Service Berdasarkan Status</h3>
+                    <form action="" method="GET" class="flex items-center space-x-4 mb-4">
+                        <label for="status_filter_select" class="text-sm font-medium text-gray-700">Tampilkan:</label>
+                        <select id="status_filter_select" name="status_filter" class="px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50 focus:ring-blue-500 focus:border-blue-500 focus:outline-none" onchange="this.form.submit()">
+                            <option value="menunggu konfirmasi" <?php if ($status_filter == 'menunggu konfirmasi') echo 'selected'; ?>>Menunggu Konfirmasi</option>
+                            <option value="menunggu pembayaran" <?php if ($status_filter == 'menunggu pembayaran') echo 'selected'; ?>>Menunggu Pembayaran</option>
+                            <option value="lunas" <?php if ($status_filter == 'lunas') echo 'selected'; ?>>Lunas</option>
+                            <option value="dp" <?php if ($status_filter == 'dp') echo 'selected'; ?>>DP</option>
+                            <option value="ditolak" <?php if ($status_filter == 'ditolak') echo 'selected'; ?>>Ditolak</option>
+                        </select>
+                        <noscript><button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md">Filter</button></noscript>
+                    </form>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Transaksi</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Service</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Pesan</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Metode Bayar</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bukti</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Catatan Admin</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <?php if (empty($daftar_pembayaran_service)): ?>
+                                    <tr>
+                                        <td colspan="10" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada pesanan dengan status yang dipilih.</td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php foreach ($daftar_pembayaran_service as $pesanan): ?>
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">#<?php echo htmlspecialchars($pesanan['id_transaksi']); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($pesanan['id_service']); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($pesanan['nama_customer']); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo date('d M Y, H:i', strtotime($pesanan['tanggal_pesan'])); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">Rp <?php echo number_format($pesanan['total_tagihan'], 0, ',', '.'); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                                <?= htmlspecialchars(ucwords($pesanan['metode'] ?? '-')) ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                                <?php if ($pesanan['bukti']): ?>
+                                                    <a href="../<?= htmlspecialchars($pesanan['bukti']) ?>" target="_blank" class="text-blue-600 hover:underline" >Lihat</a>
+                                                <?php else: ?>
+                                                    <span class="text-gray-400">N/A</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="px-6 py-4 text-sm text-gray-700 text-center">
+                                                <?= nl2br(htmlspecialchars($pesanan['catatan_bayar'] ?? '')) ?>
+                                                <?php if (!$pesanan['catatan_bayar']): ?>
+                                                    <span class="text-gray-400" >N/A</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-center font-medium">
+                                                <form action="" method="GET" class="inline">
+                                                    <input type="hidden" name="id_service" value="<?php echo htmlspecialchars($pesanan['id_service']); ?>">
+                                                    <button type="submit" name="cari_id_service" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded text-xs inline-block">
+                                                        <i class="bi bi-search"></i> Proses
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination -->
+                    <?php if ($total_pages > 1): ?>
+                    <div class="flex justify-center mt-6">
+                        <nav class="inline-flex rounded-md shadow-sm" aria-label="Pagination">
+                            <?php $prev_page = $page - 1; $next_page = $page + 1; ?>
+                            <a href="?status_filter=<?= urlencode($status_filter) ?>&page=<?= $prev_page ?>" class="px-3 py-2 border border-gray-300 bg-white text-sm font-medium rounded-l-md <?= $page <= 1 ? 'text-gray-400 cursor-not-allowed' : 'hover:bg-gray-50 text-gray-700' ?>" <?= $page <= 1 ? 'tabindex="-1" aria-disabled="true"' : '' ?>>Sebelumnya</a>
+                            <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                                <a href="?status_filter=<?= urlencode($status_filter) ?>&page=<?= $i ?>" class="px-3 py-2 border-t border-b border-gray-300 bg-white text-sm font-medium <?= $i == $page ? 'text-blue-600 font-bold' : 'text-gray-700 hover:bg-gray-50' ?>"><?= $i ?></a>
+                            <?php endfor; ?>
+                            <a href="?status_filter=<?= urlencode($status_filter) ?>&page=<?= $next_page ?>" class="px-3 py-2 border border-gray-300 bg-white text-sm font-medium rounded-r-md <?= $page >= $total_pages ? 'text-gray-400 cursor-not-allowed' : 'hover:bg-gray-50 text-gray-700' ?>" <?= $page >= $total_pages ? 'tabindex="-1" aria-disabled="true"' : '' ?>>Berikutnya</a>
+                        </nav>
+                    </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>

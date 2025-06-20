@@ -134,3 +134,6 @@
 2025-06-19 17:24:19 - Cart contents (Display): {"15":1,"9":1}
 2025-06-19 17:24:19 - Item IDs from cart (Display): [15,9]
 2025-06-19 17:24:19 - Found item for display in DB: {"id_barang":9,"nama_barang":"keyboard (l)","harga":280000}
+2025-06-20 16:43:48 - Cart contents (Display): {"26":1}
+2025-06-20 16:43:48 - Item IDs from cart (Display): [26]
+2025-06-20 16:43:48 - Found item for display in DB: {"id_barang":26,"nama_barang":"asus motherboard","harga":1500000}
