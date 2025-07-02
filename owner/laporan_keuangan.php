@@ -1,6 +1,6 @@
 <?php
 // laporan_keuangan.php
-include '../koneksi.php'; // Pastikan file koneksi.php ada dan benar
+include '../koneksi.php'; 
 
 session_start();
 

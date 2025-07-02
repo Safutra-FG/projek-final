@@ -2,10 +2,6 @@
 // Path ke koneksi.php (diasumsikan berada di folder yang sama)
 require 'koneksi.php';
 
-// Periksa koneksi database
-if ($koneksi->connect_error) {
-    die("Koneksi database gagal: " . $koneksi->connect_error);
-}
 
 // 1. MENGAMBIL SEMUA PRODUK (LIMIT DIHAPUS)
 $sql_sparepart = "SELECT id_barang, nama_barang, harga, stok, gambar FROM stok ORDER BY id_barang DESC";

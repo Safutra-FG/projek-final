@@ -1,108 +1,25 @@
 <?php
-// koneksi.php (pastikan file ini berisi koneksi database yang aman)
-include 'koneksi.php';
+// pengajuan.php
 
-// Inisialisasi variabel untuk pesan alert
+// Mulai session untuk bisa membaca pesan alert
+session_start();
+
+// Ambil pesan dari session jika ada
 $alert_message = '';
-$alert_type = ''; // 'success' atau 'danger'
+$alert_type = '';
+if (isset($_SESSION['alert_message'])) {
+    $alert_message = $_SESSION['alert_message'];
+    $alert_type = $_SESSION['alert_type'];
 
-if (isset($_POST['submit'])) {
-    // Ambil data dari form
-    $nama = trim($_POST['nama'] ?? '');
-    $no_hp = trim($_POST['nomor_telepon'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $device = trim($_POST['device'] ?? '');
-    $keluhan = trim($_POST['keluhan'] ?? '');
-
-    // Validasi input di sisi server (penting!)
-    if (empty($nama) || empty($no_hp) || empty($email) || empty($device) || empty($keluhan)) {
-        $alert_message = "Semua kolom wajib diisi!";
-        $alert_type = 'danger';
-    } elseif (!preg_match("/^[a-zA-Z\s]{3,50}$/", $nama)) {
-        $alert_message = "Nama hanya boleh mengandung huruf dan spasi (3-50 karakter).";
-        $alert_type = 'danger';
-    } elseif (!preg_match("/^\d{10,12}$/", $no_hp)) {
-        $alert_message = "Nomor handphone harus 10-12 digit angka.";
-        $alert_type = 'danger';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $alert_message = "Alamat email tidak valid.";
-        $alert_type = 'danger';
-    } else {
-        // Mulai transaksi
-        mysqli_autocommit($koneksi, FALSE);
-        $success = TRUE;
-
-        // Cek apakah customer sudah ada
-        $stmtCheck = mysqli_prepare($koneksi, "SELECT id_customer FROM customer WHERE email = ? AND no_telepon = ? AND nama_customer = ?");
-        mysqli_stmt_bind_param($stmtCheck, "sss", $email, $no_hp, $nama);
-        mysqli_stmt_execute($stmtCheck);
-        mysqli_stmt_store_result($stmtCheck);
-        
-        if (mysqli_stmt_num_rows($stmtCheck) > 0) {
-            // Customer sudah ada, ambil ID-nya
-            mysqli_stmt_bind_result($stmtCheck, $id_customer);
-            mysqli_stmt_fetch($stmtCheck);
-        } else {
-            // Customer belum ada, insert baru
-            $stmtCustomer = mysqli_prepare($koneksi, "INSERT INTO customer (nama_customer, no_telepon, email) VALUES (?, ?, ?)");
-            if ($stmtCustomer) {
-                mysqli_stmt_bind_param($stmtCustomer, "sss", $nama, $no_hp, $email);
-                if (!mysqli_stmt_execute($stmtCustomer)) {
-                    $alert_message = "Gagal input customer: " . mysqli_stmt_error($stmtCustomer);
-                    $alert_type = 'danger';
-                    $success = FALSE;
-                } else {
-                    $id_customer = mysqli_insert_id($koneksi);
-                }
-                mysqli_stmt_close($stmtCustomer);
-            } else {
-                $alert_message = "Gagal menyiapkan statement customer: " . mysqli_error($koneksi);
-                $alert_type = 'danger';
-                $success = FALSE;
-            }
-        }
-        mysqli_stmt_close($stmtCheck);
-
-        // 2. Jika input customer berhasil, lanjutkan ke tabel service
-        if ($success) {
-            $tanggal = date('Y-m-d  H:i:s');
-            
-            $stmtService = mysqli_prepare($koneksi, "INSERT INTO service (id_customer, tanggal, device, keluhan) VALUES (?, ?, ?, ?)");
-            if ($stmtService) {
-                mysqli_stmt_bind_param($stmtService, "isss", $id_customer, $tanggal, $device, $keluhan);
-                if (!mysqli_stmt_execute($stmtService)) {
-                    $alert_message = "Gagal input service: " . mysqli_stmt_error($stmtService);
-                    $alert_type = 'danger';
-                    $success = FALSE;
-                } else {
-                    $id_service = mysqli_insert_id($koneksi);
-                }
-                mysqli_stmt_close($stmtService);
-            } else {
-                $alert_message = "Gagal menyiapkan statement service: " . mysqli_error($koneksi);
-                $alert_type = 'danger';
-                $success = FALSE;
-            }
-        }
-
-        // Kelola transaksi
-        if ($success) {
-            mysqli_commit($koneksi); // Commit transaksi jika semua berhasil
-            $alert_message = "Data berhasil diajukan! ID Service kamu: **#$id_service**";
-            $alert_type = 'success';
-        } else {
-            mysqli_rollback($koneksi); // Rollback jika ada yang gagal
-        }
-
-        // Kembalikan autocommit ke mode default (opsional, tergantung kebutuhan aplikasi lain)
-        // mysqli_autocommit($koneksi, TRUE);
-    }
+    // Hapus pesan dari session agar tidak muncul lagi saat halaman di-refresh
+    unset($_SESSION['alert_message']);
+    unset($_SESSION['alert_type']);
 }
 
 // Dummy data untuk nama akun
 $namaAkun = "Customer";
 ?>
-
+ 
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -265,7 +182,7 @@ $namaAkun = "Customer";
     </div>
 </nav>
 
-<div class="main-content">
+<div class="main-content" >
     <div class="main-header">
         <h2 class="h4 text-dark mb-0 text-center flex-grow-1">Pengajuan Service</h2>
     </div>
@@ -281,7 +198,7 @@ $namaAkun = "Customer";
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-primary text-white"> <h5 class="my-0 font-weight-normal">Data Pelanggan & Perangkat</h5> </div>
             <div class="card-body">
-                <form method="POST" id="serviceForm">
+                <form action="proses/tambah_service.php" method="POST" id="serviceForm">
                     <div class="mb-3">
                         <label for="nama" class="form-label">Nama Lengkap <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="nama" name="nama" placeholder="Masukkan nama lengkap" required>

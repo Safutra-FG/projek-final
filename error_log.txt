@@ -137,3 +137,13 @@
 2025-06-20 16:43:48 - Cart contents (Display): {"26":1}
 2025-06-20 16:43:48 - Item IDs from cart (Display): [26]
 2025-06-20 16:43:48 - Found item for display in DB: {"id_barang":26,"nama_barang":"asus motherboard","harga":1500000}
+2025-06-23 08:33:39 - Cart contents (Display): {"27":1}
+2025-06-23 08:33:39 - Item IDs from cart (Display): [27]
+2025-06-23 08:33:39 - Found item for display in DB: {"id_barang":27,"nama_barang":"Acer motherboard","harga":900000}
+2025-06-25 11:29:30 - Cart contents (Display): {"26":1}
+2025-06-25 11:29:30 - Item IDs from cart (Display): [26]
+2025-06-25 11:29:30 - Found item for display in DB: {"id_barang":26,"nama_barang":"asus motherboard","harga":1500000}
+2025-06-25 11:30:26 - Cart contents (proses_konfirmasi_barang): {"26":1}
+2025-06-25 11:30:26 - Item IDs from cart (proses_konfirmasi_barang): [26]
+2025-06-25 11:30:26 - Number of rows found for cart items (proses_konfirmasi_barang): 1 out of 1
+2025-06-25 11:30:26 - Found item in DB (proses_konfirmasi_barang): {"id_barang":26,"harga":1500000}
