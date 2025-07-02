@@ -456,7 +456,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </a>
                 </div>
 
-                <form method="POST" action="edit_service.php?id=<?php echo $id_service; ?>">
+                <?php if (isset($_GET['msg']) && $_GET['msg']): ?>
+                    <?php
+                        $msg = htmlspecialchars($_GET['msg']);
+                        $is_error = stripos($msg, 'error') !== false || stripos($msg, 'gagal') !== false || stripos($msg, 'tidak') !== false;
+                    ?>
+                    <div class="mb-6">
+                        <div class="rounded-lg px-4 py-3 <?php echo $is_error ? 'bg-red-100 border border-red-400 text-red-800' : 'bg-green-100 border border-green-400 text-green-800'; ?>">
+                            <?php echo $msg; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <form method="POST" action="proses/proses_edit_service.php?id=<?php echo $id_service; ?>">
                     <input type="hidden" name="id_service" value="<?php echo htmlspecialchars($service['id_service']); ?>">
                     <input type="hidden" name="id_customer" value="<?php echo htmlspecialchars($service['id_customer']); ?>">
 

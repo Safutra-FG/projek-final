@@ -61,7 +61,7 @@ $service_details_list = [];
 $error_message = null;
 $total_biaya_aktual_dari_detail = 0;
 $namaAkun = "Customer";
-
+    
 $id_service_input = null;
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id_service'])) {
     $id_service_input = trim($_POST['id_service']);

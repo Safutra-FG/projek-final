@@ -2,11 +2,6 @@
 session_start();
 include '../koneksi.php'; // Path ini sudah benar jika koneksi.php di folder yang sama
 
-// Pastikan koneksi database sudah dibuat dan valid
-if (!isset($koneksi) || !$koneksi instanceof mysqli) {
-    die("Koneksi database belum dibuat atau salah.");
-}
-
 $namaAkun = "Admin"; // Anda bisa mengambil nama akun dari session jika sudah ada
 
 $id_customer = $_GET['id'] ?? null;
